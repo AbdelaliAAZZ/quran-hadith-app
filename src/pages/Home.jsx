@@ -26,7 +26,7 @@ function Home() {
       // Map time of day to JSON categories
       const categoryMap = {
         morning: "أذكار الصباح",
-        afternoon: "أذكار الظهيرة", // Ensure this category exists in your JSON file if used
+        afternoon: "أدعية قرآنية", // Ensure this category exists in your JSON file if used
         evening: "أذكار المساء"
       };
 
@@ -58,7 +58,7 @@ function Home() {
       case 'morning':
         return "أذكار الصباح";
       case 'afternoon':
-        return "أذكار الظهيرة";
+        return "أدعية قرآنية";
       case 'evening':
         return "أذكار المساء";
       default:
