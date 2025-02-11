@@ -2,13 +2,36 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://fonts.googleapis.com/css2?family=Amiri&family=Reem+Kufi&display=swap');
+
 :root {
+  --main-font-family: 'Amiri', serif;
+  --main-font-size: 1rem;
   color-scheme: light dark;
+}
+.font-selectable {
+  font-family: var(--main-font-family);
+  font-size: var(--main-font-size);
+}
+
+.font-arabic {
+  font-family: var(--main-font-family);
 }
 
 @layer base {
   body {
-    @apply transition-colors duration-200;
+    font-family: var(--main-font-family);
+    font-size: var(--main-font-size);
+    @apply transition-all duration-200;
+  }
+
+  .font-arabic {
+    font-family: var(--main-font-family), 'Amiri', serif;
+  }
+
+  .font-selectable {
+    font-family: var(--main-font-family);
+    font-size: var(--main-font-size);
   }
 
   .dark {
@@ -19,3 +42,9 @@
     @apply bg-gray-50 text-gray-900;
   }
 }
+
+/* Font classes */
+.font-amiri { font-family: 'Amiri', serif; }
+.font-kufi { font-family: 'Reem Kufi', sans-serif; }
+.font-sans { font-family: ui-sans-serif, system-ui, sans-serif; }
+.font-serif { font-family: ui-serif, Georgia, serif; }

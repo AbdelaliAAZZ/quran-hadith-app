@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useTheme } from '../context/ThemeContext';
-import adkarData from '../data/adkar.json'; // Adjust the path based on your project structure
+import adkarData from '../data/adkar.json';
 
 function Home() {
   const { theme } = useTheme();
-  const [adkar, setAdkar] = useState(null); // Changed to store one random Adkar
+  const [adkar, setAdkar] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [timeOfDay, setTimeOfDay] = useState('');
 
-  // Get the current time of day
+  // Ramadan date check (example: adjust dates according to current year)
+  const isRamadan = new Date() >= new Date('2024-03-10') && new Date() <= new Date('2024-04-09');
+
   const getTimeOfDay = () => {
     const hour = new Date().getHours();
     if (hour >= 5 && hour < 12) return 'morning';
@@ -17,16 +19,14 @@ function Home() {
     return 'evening';
   };
 
-  // Load a random Adkar based on time of day
   const loadRandomAdkar = () => {
     try {
       const time = getTimeOfDay();
       setTimeOfDay(time);
       
-      // Map time of day to JSON categories
       const categoryMap = {
         morning: "أذكار الصباح",
-        afternoon: "أدعية قرآنية", // Ensure this category exists in your JSON file if used
+        afternoon: "أدعية قرآنية",
         evening: "أذكار المساء"
       };
 
@@ -34,11 +34,10 @@ function Home() {
       const filteredAdkar = adkarData[categoryName] || [];
 
       if (filteredAdkar.length > 0) {
-        // Pick a random Adkar from the filtered list
         const randomAdkar = filteredAdkar[Math.floor(Math.random() * filteredAdkar.length)];
         setAdkar(randomAdkar);
       } else {
-        setAdkar(null); // No Adkar found for the category
+        setAdkar(null);
       }
       setError('');
     } catch (error) {
@@ -51,7 +50,7 @@ function Home() {
 
   useEffect(() => {
     loadRandomAdkar();
-  }, []); // Empty dependency array to run once on page load
+  }, []);
 
   const getTimeOfDayText = () => {
     switch (timeOfDay) {
@@ -67,86 +66,164 @@ function Home() {
   };
 
   return (
-    <div className={`min-h-screen bg-gradient-to-br ${theme === 'dark' ? 'from-gray-900 to-gray-800' : 'from-teal-50 to-blue-50'} p-8`}>
-      <div className={`max-w-4xl mx-auto ${theme === 'dark' ? 'bg-gray-800' : 'bg-white'} rounded-xl shadow-lg backdrop-blur-lg ${theme === 'dark' ? 'bg-opacity-90' : 'bg-opacity-80'} p-8 mt-12`}>
-        <h1 className={`text-5xl font-bold ${theme === 'dark' ? 'text-teal-200' : 'text-teal-800'} mb-6 font-amiri text-center`}>
-          Welcome to the Quran & Hadith App
+    <div className={`min-h-screen bg-gradient-to-br ${isRamadan ? 
+      (theme === 'dark' ? 'from-green-900 to-teal-900' : 'from-green-100 to-teal-50') : 
+      (theme === 'dark' ? 'from-gray-900 to-gray-800' : 'from-teal-50 to-blue-50')} p-4 sm:p-8`}>
+      
+      {/* Ramadan Banner */}
+      {isRamadan && (
+        <div className="absolute top-0 left-0 right-0 bg-gradient-to-r from-green-700 to-teal-700 text-center py-2 sm:py-3">
+          <span className="text-xl sm:text-2xl text-gold-300 font-arabic">رمضان كريم</span>
+          <span className="text-white text-sm sm:text-lg ml-2">- Ramadan Mubarak -</span>
+        </div>
+      )}
+
+      <div className={`max-w-4xl mx-auto ${theme === 'dark' ? 'bg-gray-800/90' : 'bg-white/90'} 
+        rounded-2xl shadow-xl ${isRamadan ? 'ramadan-glow' : ''} 
+        backdrop-blur-lg p-4 sm:p-8 mt-16 relative`}>
+        
+        {/* Decorative Islamic Pattern */}
+        <div className={`absolute inset-0 opacity-10 bg-repeat ${theme === 'dark' ? 'opacity-20' : ''}`} 
+             style={{backgroundImage: 'url(islamic-pattern.svg)'}} />
+
+        {/* Ramadan Icons (Hilal and Fanous) */}
+        {isRamadan && (
+          <>
+            <div className="absolute top-4 right-4 text-3xl animate-twinkle delay-100">🌙</div>
+            <div className="absolute top-12 left-8 text-2xl animate-twinkle delay-300">🪔</div>
+            <div className="absolute bottom-20 right-10 text-4xl animate-float">🌟</div>
+          </>
+        )}
+
+        <h1 className={`text-3xl sm:text-5xl font-bold ${theme === 'dark' ? 'text-teal-300' : 'text-teal-800'} 
+          mb-4 sm:mb-6 font-amiri text-center relative`}>
+          <span className="ramadan-title">{isRamadan ? '🌸 القرآن والحديث 🌙' : 'القرآن والحديث'}</span>
         </h1>
 
-        <p className={`text-lg ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} max-w-2xl mx-auto mb-8 text-center leading-relaxed`}>
-          Explore the timeless wisdom of the Quran and the authentic teachings of Hadith through an elegant and intuitive interface.
+        <p className={`text-base sm:text-xl ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} 
+          max-w-2xl mx-auto mb-6 sm:mb-8 text-center leading-relaxed`}>
+          {isRamadan ? 
+            'رمضان مبارك! تصفح القرآن الكريم والأحاديث النبوية في هذا الشهر المبارك' : 
+            'استكشف حكمة القرآن الكريم والأحاديث النبوية من خلال واجهة أنيقة'}
         </p>
 
         {/* Adkar Section */}
-        <div className="mt-12">
-          <h2 className={`text-3xl font-bold ${theme === 'dark' ? 'text-teal-200' : 'text-teal-800'} mb-6 font-amiri text-center`}>
+        <div className="mt-8 sm:mt-12 relative z-10">
+          <h2 className={`text-2xl sm:text-3xl font-bold ${theme === 'dark' ? 'text-teal-300' : 'text-teal-700'} 
+            mb-4 sm:mb-6 font-amiri text-center flex items-center justify-center`}>
+            <span className="mr-2">🌙</span>
             {getTimeOfDayText()}
+            <span className="ml-2">⭐</span>
           </h2>
 
           {loading ? (
-            <div className="flex justify-center items-center py-12">
-              <div className={`animate-spin rounded-full h-12 w-12 border-t-2 ${theme === 'dark' ? 'border-teal-400' : 'border-teal-600'}`}></div>
+            <div className="flex justify-center items-center py-8 sm:py-12">
+              <div className={`animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-t-2 ${theme === 'dark' ? 'border-teal-400' : 'border-teal-600'}`} />
             </div>
           ) : error ? (
-            <div className={`p-4 rounded-lg border ${theme === 'dark' ? 'bg-red-900/20 border-red-800 text-red-300' : 'bg-red-50 border-red-100 text-red-700'}`}>
+            <div className={`p-3 sm:p-4 rounded-lg border ${theme === 'dark' ? 'bg-red-900/20 border-red-800 text-red-300' : 'bg-red-50 border-red-100 text-red-700'}`}>
               {error}
             </div>
           ) : adkar ? (
-            <div className="space-y-6">
-              <div 
-                className={`${theme === 'dark' ? 'bg-gray-700' : 'bg-teal-50'} rounded-xl p-6 border ${theme === 'dark' ? 'border-gray-600' : 'border-teal-100'}`}
-              >
-                <p className="text-right text-3xl leading-relaxed text-gray-800 dark:text-gray-200 font-arabic mb-4">
+            <div className="space-y-4 sm:space-y-6">
+              <div className={`${theme === 'dark' ? 'bg-gray-700/50' : 'bg-teal-50/90'} 
+                rounded-xl sm:rounded-2xl p-4 sm:p-6 border-2 ${theme === 'dark' ? 'border-teal-600/50' : 'border-teal-200'} 
+                shadow-lg transition-all hover:shadow-xl`}>
+                <p className="text-right text-xl sm:text-2xl leading-loose text-gray-800 dark:text-gray-200 
+                  font-arabic mb-4 sm:mb-6 select-none">
                   {adkar.content}
                 </p>
-                {adkar.description && (
-                  <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} mb-2`}>
-                    {adkar.description}
-                  </p>
-                )}
-                {adkar.reference && (
-                  <p className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
-                    Reference: {adkar.reference}
-                  </p>
-                )}
-                {adkar.count && (
-                  <div className={`mt-4 text-sm ${theme === 'dark' ? 'text-teal-400' : 'text-teal-600'}`}>
-                    Repeat: {adkar.count} times
-                  </div>
-                )}
+                <div className="space-y-2 sm:space-y-4">
+                  {adkar.description && (
+                    <p className={`text-base italic ${theme === 'dark' ? 'text-teal-200' : 'text-teal-700'}`}>
+                      {adkar.description}
+                    </p>
+                  )}
+                  {adkar.reference && (
+                    <div className={`text-xs sm:text-sm ${theme === 'dark' ? 'text-teal-400' : 'text-teal-600'} 
+                      bg-opacity-20 p-2 sm:p-3 rounded-lg`}>
+                      📖 المرجع: {adkar.reference}
+                    </div>
+                  )}
+                  {adkar.count && (
+                    <div className={`text-base ${theme === 'dark' ? 'text-teal-400' : 'text-teal-700'} 
+                      flex items-center`}>
+                      <span className="mr-2">🕋</span>
+                      التكرار: {adkar.count} مرات
+                    </div>
+                  )}
+                </div>
               </div>
+              <button 
+                onClick={loadRandomAdkar}
+                className={`w-full py-2 sm:py-3 rounded-xl font-semibold transition-all 
+                  ${theme === 'dark' ? 
+                    'bg-teal-700 hover:bg-teal-600 text-white' : 
+                    'bg-teal-100 hover:bg-teal-200 text-teal-800'}`}
+              >
+                أذكار جديدة
+              </button>
             </div>
           ) : (
-            <div className={`p-4 rounded-lg border ${theme === 'dark' ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-teal-50 border-teal-100 text-teal-700'}`}>
-              No Adkar available for the time of day.
+            <div className={`p-3 sm:p-4 rounded-lg border ${theme === 'dark' ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-teal-50 border-teal-100 text-teal-700'}`}>
+              لا يوجد أذكار متاحة لهذا الوقت
             </div>
           )}
         </div>
 
-         {/* Features Section */}
-         <div className="grid md:grid-cols-2 gap-8 mt-12">
-          <div className={`${theme === 'dark' ? 'bg-gray-700' : 'bg-teal-50'} p-6 rounded-xl border ${theme === 'dark' ? 'border-gray-600' : 'border-teal-100'}`}>
-            <h2 className={`text-2xl font-semibold ${theme === 'dark' ? 'text-teal-200' : 'text-teal-800'} mb-4 font-amiri`}>
-              Quran
+        {/* Features Section */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-8 mt-8 sm:mt-12">
+          <div className={`${theme === 'dark' ? 'bg-gray-700/40' : 'bg-teal-50/90'} 
+            p-4 sm:p-6 rounded-xl sm:rounded-2xl border-2 ${theme === 'dark' ? 'border-teal-600/30' : 'border-teal-200'} 
+            transition-all hover:scale-[1.02]`}>
+            <h2 className={`text-xl sm:text-2xl font-semibold ${theme === 'dark' ? 'text-teal-300' : 'text-teal-800'} 
+              mb-2 sm:mb-4 font-amiri flex items-center`}>
+              <span className="mr-2">📖</span>
+              القرآن الكريم
             </h2>
-            <p className={theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}>
-              Read and listen to the Holy Quran with multiple reciters and translations.
+            <p className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'} leading-relaxed`}>
+              اقرأ واستمع إلى القرآن الكريم مع العديد من القراء والتفاسير المتاحة. {isRamadan && 'تصفح خطة القراءة الرمضانية.'}
             </p>
           </div>
 
-          <div className={`${theme === 'dark' ? 'bg-gray-700' : 'bg-teal-50'} p-6 rounded-xl border ${theme === 'dark' ? 'border-gray-600' : 'border-teal-100'}`}>
-            <h2 className={`text-2xl font-semibold ${theme === 'dark' ? 'text-teal-200' : 'text-teal-800'} mb-4 font-amiri`}>
-              Hadith
+          <div className={`${theme === 'dark' ? 'bg-gray-700/40' : 'bg-teal-50/90'} 
+            p-4 sm:p-6 rounded-xl sm:rounded-2xl border-2 ${theme === 'dark' ? 'border-teal-600/30' : 'border-teal-200'} 
+            transition-all hover:scale-[1.02]`}>
+            <h2 className={`text-xl sm:text-2xl font-semibold ${theme === 'dark' ? 'text-teal-300' : 'text-teal-800'} 
+              mb-2 sm:mb-4 font-amiri flex items-center`}>
+              <span className="mr-2">🕌</span>
+              الأحاديث النبوية
             </h2>
-            <p className={theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}>
-              Discover authentic Hadiths from various collections with detailed references.
+            <p className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'} leading-relaxed`}>
+              اكتشف الأحاديث الصحيحة مع مصادرها وشرحها. {isRamadan && 'مجموعة خاصة من أحاديث الصيام.'}
             </p>
           </div>
         </div>
-      
-    </div>
       </div>
-   
+
+      <style>{`
+        @keyframes twinkle {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.3; }
+        }
+        @keyframes float {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-10px); }
+        }
+        .animate-twinkle {
+          animation: twinkle 2s infinite;
+        }
+        .animate-float {
+          animation: float 3s ease-in-out infinite;
+        }
+        .ramadan-glow {
+          box-shadow: ${isRamadan ? '0 0 20px rgba(76, 175, 80, 0.3)' : 'none'};
+        }
+        .ramadan-title {
+          text-shadow: ${isRamadan && theme === 'dark' ? '0 0 8px rgba(255, 215, 0, 0.5)' : 'none'};
+        }
+      `}</style>
+    </div>
   );
 }
 

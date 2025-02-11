@@ -6,12 +6,26 @@ const ThemeContext = createContext();
 export function ThemeProvider({ children }) {
   const [theme, setTheme] = useState(() => {
     if (typeof window !== 'undefined') {
-      const savedTheme = localStorage.getItem('theme');
-      if (savedTheme) return savedTheme;
-      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      return localStorage.getItem('theme') || 'light';
     }
     return 'light';
   });
+
+  const [fontFamily, setFontFamily] = useState(() => {
+    return localStorage.getItem('fontFamily') || 'font-amiri';
+  });
+
+  const [fontSize, setFontSize] = useState(() => {
+    return localStorage.getItem('fontSize') || 'text-base';
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty('--main-font-family', fontFamily);
+    root.style.setProperty('--main-font-size', fontSize);
+    localStorage.setItem('fontFamily', fontFamily);
+    localStorage.setItem('fontSize', fontSize);
+  }, [fontFamily, fontSize]);
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -21,7 +35,14 @@ export function ThemeProvider({ children }) {
   }, [theme]);
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme }}>
+    <ThemeContext.Provider value={{ 
+      theme, 
+      setTheme,
+      fontFamily,
+      setFontFamily,
+      fontSize,
+      setFontSize
+    }}>
       {children}
     </ThemeContext.Provider>
   );

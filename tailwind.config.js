@@ -8,8 +8,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        inter: ['Inter', 'sans-serif'],
-        ebgaramond: ['EB Garamond', 'serif'],
+        amiri: ['Amiri', 'serif'],
+        kufi: ['Reem Kufi', 'sans-serif'],
       },
       colors: {
         primary: "#0a3d62",

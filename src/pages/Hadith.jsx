@@ -69,12 +69,12 @@ function Hadith() {
 
             <div className="space-y-8">
               <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-6 border border-teal-100 dark:border-gray-600">
-                <p className="text-right text-3xl leading-relaxed text-gray-800 dark:text-gray-200 font-arabic mb-6">
-                  {hadith.hadithArabic}
-                </p>
-                <p className="text-lg text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
-                  {hadith.hadithEnglish}
-                </p>
+              <p className="text-right text-3xl leading-relaxed text-gray-800 dark:text-gray-200 font-arabic mb-6">
+              {`"${hadith.hadithArabic}"`}
+              </p>
+                <p className="text-lg text-gray-700 dark:text-gray-300 leading-relaxed mb-4 font-selectable">
+  {hadith.hadithEnglish}
+</p>
                 {hadith.reference && (
                   <p className="text-sm text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-gray-600 px-4 py-2 rounded-full inline-block">
                     Reference: {hadith.reference}
