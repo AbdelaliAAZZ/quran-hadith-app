@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import adkarData from '../data/adkar.json';
 
@@ -186,6 +187,7 @@ function Home() {
             </p>
           </div>
 
+          <Link >
           <div className={`${theme === 'dark' ? 'bg-gray-700/40' : 'bg-teal-50/90'} 
             p-4 sm:p-6 rounded-xl sm:rounded-2xl border-2 ${theme === 'dark' ? 'border-teal-600/30' : 'border-teal-200'} 
             transition-all hover:scale-[1.02]`}>
@@ -198,6 +200,7 @@ function Home() {
               اكتشف الأحاديث الصحيحة مع مصادرها وشرحها. {isRamadan && 'مجموعة خاصة من أحاديث الصيام.'}
             </p>
           </div>
+          </Link>
         </div>
       </div>
 

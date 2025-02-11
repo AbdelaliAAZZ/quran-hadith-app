@@ -17,18 +17,23 @@ function Quran() {
   // Pagination for Reading Mode
   const [currentPage, setCurrentPage] = useState(1);
   const versesPerPage = 10;
-  // Font controls for Reading Mode
+  // Font controls (applied in Reading Mode and Listen Mode)
   const [readingFontSize, setReadingFontSize] = useState(24);
   const [readingFontStyle, setReadingFontStyle] = useState('Amiri');
   // State for Listen Mode (play all surah audio)
   const [isPlayingAll, setIsPlayingAll] = useState(false);
   const [currentPlayingIndex, setCurrentPlayingIndex] = useState(0);
+  // New state for pause/resume functionality and progress tracking
+  const [isPaused, setIsPaused] = useState(false);
+  const [progress, setProgress] = useState(0);
 
   const { theme } = useTheme();
 
   // Refs for auto‑scroll and audio playlist
   const mainContentRef = useRef(null);
   const audioAllRef = useRef(null);
+  // A flag to automatically start playback when the new surah’s verses load
+  const autoPlayRef = useRef(false);
 
   // List of reciters
   const reciters = [
@@ -62,20 +67,25 @@ function Quran() {
   const fetchVerses = useCallback(async (surahNumber) => {
     setLoading(true);
     setError('');
+    let fetchedVerses = [];
     try {
       const response = await fetch(
         `https://api.alquran.cloud/v1/surah/${surahNumber}/ar.${reciter}`
       );
       if (!response.ok) throw new Error('Failed to fetch verses');
       const data = await response.json();
-      setVerses(data.data?.ayahs || []);
+      fetchedVerses = data.data?.ayahs || [];
+      setVerses(fetchedVerses);
     } catch (error) {
       console.error('Error fetching verses:', error);
-      setError('Failed to load verses. Please check your connection or try another reciter.');
+      setError(
+        'Failed to load verses. Please check your connection or try another reciter.'
+      );
       setVerses([]);
     } finally {
       setLoading(false);
     }
+    return fetchedVerses;
   }, [reciter]);
 
   // Handle individual verse audio play in Normal Mode
@@ -104,13 +114,45 @@ function Quran() {
     }
   };
 
-  // Refetch verses if the reciter changes
+  // Refetch verses if the reciter or selected surah changes
   useEffect(() => {
     if (selectedSurah) {
       setPlayingAudio(null);
       fetchVerses(selectedSurah.number);
     }
   }, [reciter, selectedSurah, fetchVerses]);
+
+  // Auto‑play in Listen Mode when new verses load
+  useEffect(() => {
+    if (listenMode && selectedSurah && autoPlayRef.current && verses.length > 0) {
+      setIsPlayingAll(true);
+      setIsPaused(false);
+      setCurrentPlayingIndex(0);
+      setProgress(0);
+      if (audioAllRef.current) {
+        audioAllRef.current.src = verses[0].audio;
+        audioAllRef.current.currentTime = 0;
+        audioAllRef.current.play();
+      }
+      autoPlayRef.current = false;
+    }
+  }, [verses, listenMode, selectedSurah]);
+
+  // Attach a timeupdate listener for the progress bar
+  useEffect(() => {
+    const audioEl = audioAllRef.current;
+    if (audioEl) {
+      const handleTimeUpdate = () => {
+        if (audioEl.duration) {
+          setProgress((audioEl.currentTime / audioEl.duration) * 100);
+        }
+      };
+      audioEl.addEventListener('timeupdate', handleTimeUpdate);
+      return () => {
+        audioEl.removeEventListener('timeupdate', handleTimeUpdate);
+      };
+    }
+  }, []);
 
   // Toggle Reading Mode
   const toggleReadingMode = () => {
@@ -147,31 +189,87 @@ function Quran() {
   const playAllSurah = () => {
     if (!verses.length) return;
     setIsPlayingAll(true);
+    setIsPaused(false);
     setCurrentPlayingIndex(0);
+    setProgress(0);
     if (audioAllRef.current) {
       audioAllRef.current.src = verses[0].audio;
+      audioAllRef.current.currentTime = 0;
       audioAllRef.current.play();
     }
   };
 
+  // Toggle Pause/Resume (retaining current position within the verse)
+  const togglePauseResume = () => {
+    if (audioAllRef.current) {
+      if (isPaused) {
+        audioAllRef.current.play();
+        setIsPaused(false);
+      } else {
+        audioAllRef.current.pause();
+        setIsPaused(true);
+      }
+    }
+  };
+
+  // Stop playback completely and reset progress
   const stopPlayAll = () => {
     if (audioAllRef.current) {
       audioAllRef.current.pause();
+      audioAllRef.current.currentTime = 0;
     }
     setIsPlayingAll(false);
+    setIsPaused(false);
     setCurrentPlayingIndex(0);
+    setProgress(0);
   };
 
+  // Handle audio ended event: play next verse if available
   const handleAudioEnded = () => {
     if (currentPlayingIndex < verses.length - 1) {
       const nextIndex = currentPlayingIndex + 1;
       setCurrentPlayingIndex(nextIndex);
+      setProgress(0);
       if (audioAllRef.current) {
         audioAllRef.current.src = verses[nextIndex].audio;
+        audioAllRef.current.currentTime = 0;
         audioAllRef.current.play();
       }
     } else {
       setIsPlayingAll(false);
+    }
+  };
+
+  // Handle Next Surah: resets and starts playback at beginning of new surah
+  const handleNextSurah = () => {
+    if (!selectedSurah) return;
+    const currentIndex = surahs.findIndex(s => s.number === selectedSurah.number);
+    if (currentIndex >= 0 && currentIndex < surahs.length - 1) {
+      const nextSurah = surahs[currentIndex + 1];
+      autoPlayRef.current = true; // flag for auto‑play when verses load
+      setSelectedSurah(nextSurah);
+      setPlayingAudio(null);
+      setVerseFilter('');
+      setCurrentPage(1);
+      setIsPlayingAll(false);
+      setIsPaused(false);
+      setProgress(0);
+      setListenMode(true);
+      // Verses will be fetched via useEffect on selectedSurah change.
+    }
+  };
+
+  // Determine if the current surah is the last in the list
+  const currentSurahIndex = selectedSurah ? surahs.findIndex(s => s.number === selectedSurah.number) : -1;
+  const isLastSurah = currentSurahIndex === surahs.length - 1;
+
+  // Allow seeking by dragging the progress bar
+  const handleProgressChange = (e) => {
+    const newVal = e.target.value;
+    if (audioAllRef.current && audioAllRef.current.duration) {
+      const newTime = (newVal / 100) * audioAllRef.current.duration;
+      audioAllRef.current.currentTime = newTime;
+      setProgress(newVal);
     }
   };
 
@@ -285,19 +383,66 @@ function Quran() {
 
               {/* Conditionally Render Content Based on Mode */}
               {listenMode ? (
-                // Listen Mode: Audio-only player for the entire surah
+                // Listen Mode: Audio player for the entire surah with Spotify‑like controls
                 <div className="text-center">
                   <h2 className={`text-2xl font-bold ${theme === 'dark' ? 'text-teal-200' : 'text-teal-800'} mb-4 font-amiri`}>
                     {selectedSurah.name}
                   </h2>
-                  <p className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'} mb-4`}>Listen to the entire surah</p>
+                  <p className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'} mb-4`}>
+                    Listen to the entire surah
+                  </p>
                   {isPlayingAll ? (
-                    <button
-                      onClick={stopPlayAll}
-                      className="px-4 py-2 bg-red-500 text-white rounded-lg"
-                    >
-                      Stop
-                    </button>
+                    <div className="flex flex-col items-center gap-4">
+                      {/* Playback Controls */}
+                      <div className="flex justify-center gap-4">
+                        <button
+                          onClick={togglePauseResume}
+                          className="px-4 py-2 bg-yellow-500 text-white rounded-lg"
+                        >
+                          {isPaused ? 'Resume' : 'Pause'}
+                        </button>
+                        <button
+                          onClick={stopPlayAll}
+                          className="px-4 py-2 bg-red-500 text-white rounded-lg"
+                        >
+                          Stop
+                        </button>
+                        <button
+                          onClick={handleNextSurah}
+                          className="px-4 py-2 bg-blue-500 text-white rounded-lg"
+                          disabled={isLastSurah}
+                          title={isLastSurah ? "No next surah available" : "Next Surah"}
+                        >
+                          Next Surah
+                        </button>
+                      </div>
+                      {/* Progress Bar */}
+                      <div className="w-full max-w-md">
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          value={progress}
+                          onChange={handleProgressChange}
+                          className="w-full"
+                        />
+                        <p className="text-sm text-gray-500 mt-1">
+                          {Math.floor(audioAllRef.current?.currentTime || 0)}s / {Math.floor(audioAllRef.current?.duration || 0)}s
+                        </p>
+                      </div>
+                      {/* Display Current Verse Text */}
+                      <div className="mt-4 p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                        <p
+                          className="text-center font-arabic font-selectable"
+                          style={{ fontSize: readingFontSize, fontFamily: readingFontStyle }}
+                        >
+                          {verses[currentPlayingIndex]?.text}
+                        </p>
+                      </div>
+                      <p className="mt-2 text-gray-500">
+                        Playing verse {currentPlayingIndex + 1} of {verses.length}
+                      </p>
+                    </div>
                   ) : (
                     <button
                       onClick={playAllSurah}
@@ -306,15 +451,10 @@ function Quran() {
                       Play All
                     </button>
                   )}
-                  {isPlayingAll && (
-                    <p className="mt-4 text-gray-500">
-                      Playing verse {currentPlayingIndex + 1} of {verses.length}
-                    </p>
-                  )}
                   <audio ref={audioAllRef} onEnded={handleAudioEnded} style={{ display: 'none' }} />
                 </div>
               ) : readingMode ? (
-                // Reading Mode: Book‑style view with pagination and enhanced font controls
+                // Reading Mode: Book‑style view with pagination and font controls
                 <>
                   {/* Font Size & Style Controls */}
                   <div className="flex flex-col items-center gap-4 mb-4">
