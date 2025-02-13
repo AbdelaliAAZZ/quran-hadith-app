@@ -1,124 +1,137 @@
 import { useState, useEffect } from 'react';
 
+
 function Hadith() {
-    const [hadith, setHadith] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(false);
+  const [hadith, setHadith] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [copySuccess, setCopySuccess] = useState(false);
 
-    // Properly encode API key with $ symbols
-    const apiKey = encodeURIComponent('$2y$10$f6vJfCrsGlfCE4Y15GNgNOGMLDh2aZeNYYw9wNlzF45imr9SMr1u');
+  // Use your API key (properly encoded) and endpoint.
+  // (You can change this endpoint if you wish to use a different/better API.)
+  const apiKey = encodeURIComponent('$2y$10$f6vJfCrsGlfCE4Y15GNgNOGMLDh2aZeNYYw9wNlzF45imr9SMr1u');
 
-    const fetchRandomHadith = async () => {
-        setLoading(true);
-        setError(false);
+  const fetchRandomHadith = async () => {
+    setLoading(true);
+    setError(false);
 
-        try {
-            const response = await fetch(
-                `https://corsproxy.io/?https://hadithapi.com/api/hadiths?apiKey=${apiKey}&limit=50`
-            );
+    try {
+      const response = await fetch(
+        `https://corsproxy.io/?https://hadithapi.com/api/hadiths?apiKey=${apiKey}&limit=50`
+      );
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
-            const data = await response.json();
+      const data = await response.json();
 
-            if (data.hadiths?.data?.length > 0) {
-                const randomIndex = Math.floor(Math.random() * data.hadiths.data.length);
-                setHadith(data.hadiths.data[randomIndex]);
-            } else {
-                throw new Error("No hadiths found in response data");
-            }
-        } catch (error) {
-            console.error("Error fetching hadith:", error);
-            setError(true);
-        } finally {
-            setLoading(false);
-        }
-    };
+      if (data.hadiths?.data?.length > 0) {
+        const randomIndex = Math.floor(Math.random() * data.hadiths.data.length);
+        setHadith(data.hadiths.data[randomIndex]);
+      } else {
+        throw new Error("No hadiths found in response data");
+      }
+    } catch (err) {
+      console.error("Error fetching hadith:", err);
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    useEffect(() => {
-        fetchRandomHadith();
-    }, []);
+  useEffect(() => {
+    fetchRandomHadith();
+  }, []);
 
-    
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-teal-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 p-4 sm:p-8">
-          <div className="max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-xl backdrop-blur-lg bg-opacity-90 dark:bg-opacity-95 p-6 sm:p-8">
-              <h2 className="text-3xl sm:text-4xl font-bold text-teal-800 dark:text-teal-200 mb-6 text-center font-amiri">
-                  📖 Random Hadith
-              </h2>
+  // Custom copy handler with animated notification
+  const handleCopy = async () => {
+    if (hadith) {
+      try {
+        // Copy both Arabic and English texts (separated by a newline)
+        const textToCopy = `${hadith.hadithArabic}\n\n${hadith.hadithEnglish}`;
+        await navigator.clipboard.writeText(textToCopy);
+        setCopySuccess(true);
+        setTimeout(() => setCopySuccess(false), 2000);
+      } catch (err) {
+        console.error("Failed to copy:", err);
+      }
+    }
+  };
 
-              {loading ? (
-                  <div className="flex justify-center items-center py-12">
-                      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal-600 dark:border-teal-400"></div>
-                  </div>
-              ) : error ? (
-                  <div className="text-center p-8 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300">
-                      Failed to load hadith. Please try again.
-                  </div>
-              ) : hadith ? (
-                  <div className="space-y-6">
-                      {/* Book Info */}
-                      <div className="bg-teal-50/50 dark:bg-gray-700 rounded-xl p-4 sm:p-6 mb-4 border border-teal-100 dark:border-gray-600">
-                          <h3 className="text-xl sm:text-2xl font-semibold text-teal-800 dark:text-teal-200 mb-2">
-                              {hadith.headingEnglish}
-                          </h3>
-                          <p className="text-sm sm:text-base text-teal-600 dark:text-teal-400">
-                              {hadith.book.bookName} - {hadith.chapter.chapterEnglish}
-                          </p>
-                      </div>
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-teal-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 p-4 sm:p-8">
+      <div className="max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-xl backdrop-blur-lg bg-opacity-90 dark:bg-opacity-95 p-6 sm:p-8">
+        <h2 className="text-2xl sm:text-3xl font-bold text-teal-800 dark:text-teal-200 mb-4 text-center font-amiri">
+          📖 حديث عشوائي
+        </h2>
 
-                      {/* Hadith Content */}
-                      <div className="space-y-8">
-                          <div className="bg-gray-50/50 dark:bg-gray-700 rounded-xl p-6 border-2 border-teal-100/50 dark:border-gray-600">
-                              <div className="mb-6">
-                                  <p className="text-right text-2xl sm:text-3xl leading-loose text-gray-800 dark:text-gray-200 font-arabic mb-6">
-                                      {`"${hadith.hadithArabic}"`}
-                                  </p>
-                              </div>
-                              
-                              <div className="border-t border-teal-100 dark:border-gray-600 pt-6">
-                                  <p className="text-base sm:text-lg text-gray-700 dark:text-gray-300 leading-relaxed font-light tracking-wide">
-                                      {hadith.hadithEnglish}
-                                  </p>
-                              </div>
-
-                              {hadith.reference && (
-                                  <div className="mt-6 text-right">
-                                      <span className="text-sm sm:text-base text-teal-600 dark:text-teal-400 bg-teal-50/50 dark:bg-gray-600 px-4 py-2 rounded-full inline-block">
-                                          Reference: {hadith.reference}
-                                      </span>
-                                  </div>
-                              )}
-                          </div>
-                      </div>
-                  </div>
-              ) : null}
-
-              <div className="mt-8 flex justify-center">
-                  <button
-                      className="w-full sm:w-auto bg-teal-600 hover:bg-teal-700 dark:bg-teal-700 dark:hover:bg-teal-600 
-                      text-white font-medium py-3 px-8 rounded-xl shadow-md hover:shadow-lg 
-                      transition-all duration-200 transform hover:scale-105 disabled:opacity-50"
-                      onClick={fetchRandomHadith}
-                      disabled={loading}
-                  >
-                      {loading ? (
-                          <span className="flex items-center justify-center">
-                              <svg className="animate-spin h-5 w-5 mr-3 text-white" viewBox="0 0 24 24">
-                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
-                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
-                              </svg>
-                              Loading...
-                          </span>
-                      ) : (
-                          'New Hadith'
-                      )}
-                  </button>
-              </div>
+        {loading ? (
+          <div className="flex justify-center items-center py-8">
+            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-teal-600 dark:border-teal-400"></div>
           </div>
+        ) : error ? (
+          <div className="text-center p-4 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300">
+            فشل في تحميل الحديث. يرجى المحاولة مرة أخرى.
+          </div>
+        ) : hadith ? (
+          <div className="space-y-4">
+            {/* Heading, Book Info, and Reference */}
+            <div className="text-center">
+              {hadith.headingEnglish && (
+                <h3 className="text-lg font-semibold text-teal-800 dark:text-teal-200">
+                  {hadith.headingEnglish}
+                </h3>
+              )}
+              {hadith.book && hadith.chapter && (
+                <p className="text-sm text-teal-600 dark:text-teal-400">
+                  {hadith.book.bookName} - {hadith.chapter.chapterEnglish}
+                </p>
+              )}
+              {hadith.reference && (
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  المرجع: {hadith.reference}
+                </p>
+              )}
+            </div>
+
+            {/* Hadith Texts */}
+            <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-4 border border-teal-100 dark:border-gray-600">
+              <p className="text-right text-base leading-relaxed text-gray-800 dark:text-gray-200 font-arabic mb-2">
+                {hadith.hadithArabic}
+              </p>
+              <p className="text-left text-base leading-relaxed text-gray-800 dark:text-gray-200">
+                {hadith.hadithEnglish}
+              </p>
+            </div>
+          </div>
+        ) : null}
+
+        {/* Custom animated copy notification */}
+        {copySuccess && (
+          <div className="fixed top-4 right-4 bg-teal-600 text-white px-4 py-2 rounded-full shadow-lg animate-bounce">
+            تم النسخ!
+          </div>
+        )}
+
+        <div className="mt-6 flex flex-col sm:flex-row gap-4 justify-center">
+          <button
+            onClick={handleCopy}
+            className="w-full sm:w-auto bg-teal-500 hover:bg-teal-600 text-white font-medium py-2 px-6 rounded-xl shadow-md transition-all duration-200 transform hover:scale-105 disabled:opacity-50"
+            disabled={loading}
+          >
+            {loading ? "جار التحميل..." : "نسخ الحديث"}
+          </button>
+          <button
+            onClick={fetchRandomHadith}
+            className="w-full sm:w-auto bg-teal-500 hover:bg-teal-600 text-white font-medium py-2 px-6 rounded-xl shadow-md transition-all duration-200 transform hover:scale-105 disabled:opacity-50"
+            disabled={loading}
+          >
+            {loading ? "جار التحميل..." : "حديث جديد"}
+          </button>
+        </div>
       </div>
+    </div>
   );
 }
 

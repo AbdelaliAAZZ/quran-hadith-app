@@ -2,13 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Amiri&family=Reem+Kufi&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Amiri&family=Reem+Kufi&family=Lateef&family=Scheherazade&display=swap');
 
 :root {
   --main-font-family: 'Amiri', serif;
   --main-font-size: 1rem;
   color-scheme: light dark;
 }
+
 .font-selectable {
   font-family: var(--main-font-family);
   font-size: var(--main-font-size);
@@ -24,27 +25,23 @@
     font-size: var(--main-font-size);
     @apply transition-all duration-200;
   }
-
   .font-arabic {
     font-family: var(--main-font-family), 'Amiri', serif;
   }
-
   .font-selectable {
     font-family: var(--main-font-family);
     font-size: var(--main-font-size);
   }
-
   .dark {
     @apply bg-gray-900 text-white;
   }
-
   .light {
     @apply bg-gray-50 text-gray-900;
   }
 }
 
-/* Font classes */
+/* Additional font classes */
 .font-amiri { font-family: 'Amiri', serif; }
 .font-kufi { font-family: 'Reem Kufi', sans-serif; }
-.font-sans { font-family: ui-sans-serif, system-ui, sans-serif; }
-.font-serif { font-family: ui-serif, Georgia, serif; }
+.font-lateef { font-family: 'Lateef', cursive; }
+.font-scheherazade { font-family: 'Scheherazade', serif; }

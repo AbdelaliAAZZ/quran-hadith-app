@@ -65,6 +65,7 @@ function Home() {
         return "الأذكار";
     }
   };
+  
 
   return (
     <div className={`min-h-screen bg-gradient-to-br ${isRamadan ? 

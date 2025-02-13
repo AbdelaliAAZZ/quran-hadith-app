@@ -4,6 +4,7 @@ import Home from './pages/Home';
 import Quran from './pages/Quran';
 import Hadith from './pages/Hadith';
 import { useTheme } from './context/ThemeContext';
+import HadithBooks from './pages/HadithBooks ';
 
 function App() {
   const { theme } = useTheme();
@@ -16,6 +17,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/quran" element={<Quran />} />
           <Route path="/hadith" element={<Hadith />} />
+          <Route path="/books" element={<HadithBooks />} />
         </Routes>
       </main>
       <footer className={`text-center py-12 ${theme === 'dark' ? 'bg-gray-900 text-gray-400' : 'bg-gray-100 text-gray-700'}`}>
