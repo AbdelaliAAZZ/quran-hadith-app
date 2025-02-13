@@ -7,8 +7,7 @@ function Hadith() {
   const [error, setError] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
 
-  // Use your API key (properly encoded) and endpoint.
-  // (You can change this endpoint if you wish to use a different/better API.)
+  
   const apiKey = encodeURIComponent('$2y$10$f6vJfCrsGlfCE4Y15GNgNOGMLDh2aZeNYYw9wNlzF45imr9SMr1u');
 
   const fetchRandomHadith = async () => {
