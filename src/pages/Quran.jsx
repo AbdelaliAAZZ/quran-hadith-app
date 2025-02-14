@@ -78,8 +78,7 @@ function Quran() {
   const [bookmarks, setBookmarks] = useState([]);
   const [activeTab, setActiveTab] = useState('quran');
 
-  // Mobile sidebar toggle
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  // Sidebar is always open—mobile toggle functionality has been removed
 
   // Tafsir toggle state – tracks which verse’s tafsir is open
   const [tafsirOpen, setTafsirOpen] = useState({});
@@ -138,12 +137,25 @@ function Quran() {
         if (!res.ok) throw new Error('فشل في جلب السور');
         return res.json();
       })
-      .then((data) => setSurahs(data.data || []))
+      .then((data) => {
+        const surahsData = data.data || [];
+        setSurahs(surahsData);
+      })
       .catch((err) => {
         console.error('خطأ في جلب السور:', err);
         setError('فشل تحميل السور. يرجى المحاولة لاحقاً.');
       });
   }, []);
+
+  // Set default surah to Al-Fatiha (number 1) if not already selected
+  useEffect(() => {
+    if (surahs.length > 0 && !selectedSurah) {
+      const defaultSurah = surahs.find((s) => s.number === 1);
+      if (defaultSurah) {
+        setSelectedSurah(defaultSurah);
+      }
+    }
+  }, [surahs, selectedSurah]);
 
   // Filter surahs by name
   const filteredSurahs = surahs.filter((surah) =>
@@ -209,7 +221,7 @@ function Quran() {
     setIsPlayingAll(false);
     setListenMode(false);
     fetchVerses(surah.number);
-    if (window.innerWidth < 768 && mainContentRef.current) {
+    if (mainContentRef.current) {
       setTimeout(() => {
         mainContentRef.current.scrollIntoView({ behavior: 'smooth' });
       }, 300);
@@ -349,6 +361,7 @@ function Quran() {
     setProgress(0);
   };
 
+  // Modified Previous/Next: stop current audio and reset the surah so that it plays from the start.
   const handleNextSurah = () => {
     if (!selectedSurah) return;
     stopPlayAll();
@@ -496,20 +509,6 @@ function Quran() {
     setShareVerse(null);
   };
 
-  // ------------------ MOBILE SIDEBAR TOGGLE ------------------
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth < 768) {
-        setSidebarOpen(false);
-      } else {
-        setSidebarOpen(true);
-      }
-    };
-    window.addEventListener('resize', handleResize);
-    handleResize();
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
   // ------------------ SCROLL TO TOP FUNCTION ------------------
   const scrollToTop = () => {
     if (readingContainerRef.current) {
@@ -530,7 +529,7 @@ function Quran() {
         {/* SIDEBAR */}
         <aside
           className={`
-            ${sidebarOpen ? 'block' : 'hidden'} md:block md:col-span-1
+            block md:col-span-1
             ${theme === 'dark' ? 'bg-gray-800' : 'bg-white'}
             rounded-xl shadow-lg p-4 md:p-6 backdrop-blur-lg
             ${theme === 'dark' ? 'bg-opacity-90' : 'bg-opacity-80'}
@@ -768,7 +767,7 @@ function Quran() {
             )}
           </section>
         ) : (
-          // Quran Reading View (Card-style)
+          // Quran Reading View (Card-style) – Always use RTL for Arabic
           <section
             ref={mainContentRef}
             className={`md:col-span-2 ${
@@ -776,7 +775,7 @@ function Quran() {
             } rounded-xl shadow-lg p-4 md:p-6 backdrop-blur-lg ${
               effectiveReadingOption === 'juz' ? 'dir-rtl' : ''
             }`}
-            dir={readingMode || listenMode ? 'rtl' : 'ltr'}
+            dir="rtl"
           >
             {selectedSurah || effectiveReadingOption === 'juz' ? (
               <>
@@ -1070,9 +1069,7 @@ function Quran() {
                 ) : readingMode ? (
                   <div
                     ref={readingContainerRef}
-                    className={`relative ${
-                      isFullScreen ? 'w-full h-screen p-8 overflow-auto' : ''
-                    }`}
+                    className={`relative ${isFullScreen ? 'w-full h-screen p-8 overflow-auto' : ''}`}
                   >
                     <div className="flex flex-col sm:flex-row items-center justify-between mb-4">
                       <div className="flex items-center gap-4">
@@ -1401,7 +1398,7 @@ function Quran() {
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg w-96">
             <h2 className="text-xl font-bold mb-4 text-center font-amiri">مشاركة الآية</h2>
             <p className="mb-4 text-center">{shareVerse.text}</p>
-            <div className="flex justify-center gap-4 mb-4">
+            <div className="flex justify-around gap-4 mb-4">
               <button
                 onClick={() => setShareType('text')}
                 className={`px-4 py-2 rounded ${shareType === 'text' ? 'bg-teal-600 text-white' : 'bg-gray-300'}`}
