@@ -11,10 +11,13 @@
   },
   "dependencies": {
     "cors": "^2.8.5",
+    "emailjs-com": "^3.2.0",
     "origin": "^0.8.6",
+    "pdfjs-dist": "^4.10.38",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-icons": "^5.4.0",
+    "react-pdf": "^9.2.1",
     "react-router-dom": "^7.1.5"
   },
   "devDependencies": {

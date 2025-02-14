@@ -27,6 +27,14 @@ import {
   FaWhatsapp,
 } from 'react-icons/fa';
 
+// 1) React-PDF imports
+import { Document, Page, pdfjs } from 'react-pdf';
+// Must configure the PDF worker for Vite or CRA:
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.js`;
+
+// 2) Import your PDF from src/assets
+import quranPDF from '../assets/quran.pdf';
+
 function Quran() {
   // ------------------ STATE ------------------
   const [surahs, setSurahs] = useState([]);
@@ -64,30 +72,44 @@ function Quran() {
   const [playbackRate, setPlaybackRate] = useState(1);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
 
-  // Reading Option: "surah" or "juz"
+  // Reading Option: only 'surah' or 'juz'
   const [readingOption, setReadingOption] = useState('surah');
   const [selectedJuz, setSelectedJuz] = useState(1);
 
   // Full screen state for Reading Mode
   const [isFullScreen, setIsFullScreen] = useState(false);
 
-  // Feedback message (for copy, tafsir toggle, favourites, partage)
+  // Feedback message (for copy, tafsir toggle, favourites, share)
   const [copyMessage, setCopyMessage] = useState('');
 
   // Favourite verses and active tab state
   const [bookmarks, setBookmarks] = useState([]);
   const [activeTab, setActiveTab] = useState('quran');
 
-  // Sidebar is always open—mobile toggle functionality has been removed
-
   // Tafsir toggle state – tracks which verse’s tafsir is open
   const [tafsirOpen, setTafsirOpen] = useState({});
 
-  // New state for sharing – if a verse is selected for sharing, its object is stored here
+  // Sharing states
   const [shareVerse, setShareVerse] = useState(null);
-  // New states for share modal enhancements
   const [shareType, setShareType] = useState('text'); // 'text' or 'audio'
   const [chosenReader, setChosenReader] = useState('alafasy');
+
+  // 3) PDF Reading State
+  const [showAllQuran, setShowAllQuran] = useState(false);
+  const [pdfNumPages, setPdfNumPages] = useState(null);
+  const [pdfPageNumber, setPdfPageNumber] = useState(1);
+
+  // For PDF: handle onLoadSuccess
+  const onDocumentLoadSuccess = ({ numPages }) => {
+    setPdfNumPages(numPages);
+    setPdfPageNumber(1);
+  };
+  const goToPrevPdfPage = () => {
+    setPdfPageNumber((prev) => Math.max(prev - 1, 1));
+  };
+  const goToNextPdfPage = () => {
+    setPdfPageNumber((prev) => Math.min(prev + 1, pdfNumPages || 1));
+  };
 
   const { theme } = useTheme();
 
@@ -113,13 +135,6 @@ function Quran() {
     'Noto Naskh Arabic',
     'KFGQPC Uthmanic Script',
   ];
-
-  // ------------------ NORMALIZE READING MODE ------------------
-  // If readingOption is "zuz2" or "ziz2" (case-insensitive), treat it as "juz"
-  const effectiveReadingOption =
-    (readingOption.toLowerCase() === 'zuz2' || readingOption.toLowerCase() === 'ziz2')
-      ? 'juz'
-      : readingOption;
 
   // ------------------ LOAD BOOKMARKS FROM LOCALSTORAGE ------------------
   useEffect(() => {
@@ -147,7 +162,7 @@ function Quran() {
       });
   }, []);
 
-  // Set default surah to Al-Fatiha (number 1) if not already selected
+  // Default surah = Al-Fatiha if none selected
   useEffect(() => {
     if (surahs.length > 0 && !selectedSurah) {
       const defaultSurah = surahs.find((s) => s.number === 1);
@@ -213,7 +228,7 @@ function Quran() {
 
   // ------------------ MODE & SELECTION LOGIC ------------------
   const handleSurahClick = (surah) => {
-    if (effectiveReadingOption !== 'surah') return;
+    if (readingOption !== 'surah') return;
     setSelectedSurah(surah);
     setPlayingAudio(null);
     setVerseFilter('');
@@ -229,17 +244,17 @@ function Quran() {
   };
 
   useEffect(() => {
-    if (effectiveReadingOption === 'surah' && selectedSurah) {
+    if (readingOption === 'surah' && selectedSurah) {
       setPlayingAudio(null);
       fetchVerses(selectedSurah.number);
     }
-  }, [reciter, selectedSurah, fetchVerses, effectiveReadingOption]);
+  }, [reciter, selectedSurah, fetchVerses, readingOption]);
 
   useEffect(() => {
-    if (effectiveReadingOption === 'juz') {
+    if (readingOption === 'juz') {
       fetchJuz(selectedJuz);
     }
-  }, [effectiveReadingOption, selectedJuz]);
+  }, [readingOption, selectedJuz]);
 
   // ------------------ AUTO-PLAY LOGIC ------------------
   useEffect(() => {
@@ -262,6 +277,7 @@ function Quran() {
     const audioEl = audioAllRef.current;
     if (!audioEl) return;
     audioEl.playbackRate = playbackRate;
+
     const handleTimeUpdate = () => {
       if (audioEl.duration) {
         const current = audioEl.currentTime;
@@ -270,6 +286,7 @@ function Quran() {
         setRemainingTime(Math.ceil((audioEl.duration - current) / 60));
       }
     };
+
     const handleEnded = () => {
       if (currentPlayingIndex < verses.length - 1 && isPlayingAll) {
         const nextIndex = currentPlayingIndex + 1;
@@ -284,8 +301,10 @@ function Quran() {
         setIsPlayingAll(false);
       }
     };
+
     audioEl.addEventListener('timeupdate', handleTimeUpdate);
     audioEl.addEventListener('ended', handleEnded);
+
     return () => {
       audioEl.removeEventListener('timeupdate', handleTimeUpdate);
       audioEl.removeEventListener('ended', handleEnded);
@@ -307,8 +326,9 @@ function Quran() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [verseFilter, selectedSurah, effectiveReadingOption]);
+  }, [verseFilter, selectedSurah, readingOption]);
 
+  // Filter verses for searching
   const filteredVerses = verses.filter(
     (verse) =>
       verse.text.includes(verseFilter) ||
@@ -361,7 +381,6 @@ function Quran() {
     setProgress(0);
   };
 
-  // Modified Previous/Next: stop current audio and reset the surah so that it plays from the start.
   const handleNextSurah = () => {
     if (!selectedSurah) return;
     stopPlayAll();
@@ -416,6 +435,7 @@ function Quran() {
     if (!audioAllRef.current) return;
     audioAllRef.current.currentTime += 5;
   };
+
   const skipBackward5 = () => {
     if (!audioAllRef.current) return;
     audioAllRef.current.currentTime = Math.max(
@@ -466,7 +486,9 @@ function Quran() {
 
   // ------------------ FAVOURITE FUNCTIONS ------------------
   const bookmarkVerse = (verse) => {
-    const existing = bookmarks.find((b) => b.numberInSurah === verse.numberInSurah);
+    // Use a more unique key for bookmarks to avoid duplicates:
+    const bookmarkKey = `${verse.number}-${verse.numberInSurah}`;
+    const existing = bookmarks.find((b) => `${b.number}-${b.numberInSurah}` === bookmarkKey);
     if (!existing) {
       const newBookmarks = [...bookmarks, verse];
       setBookmarks(newBookmarks);
@@ -477,7 +499,10 @@ function Quran() {
   };
 
   const removeFavourite = (verse) => {
-    const updated = bookmarks.filter((b) => b.numberInSurah !== verse.numberInSurah);
+    const bookmarkKey = `${verse.number}-${verse.numberInSurah}`;
+    const updated = bookmarks.filter(
+      (b) => `${b.number}-${b.numberInSurah}` !== bookmarkKey
+    );
     setBookmarks(updated);
     localStorage.setItem('quranBookmarks', JSON.stringify(updated));
   };
@@ -493,11 +518,13 @@ function Quran() {
         audioURL = audioURL.replace(reciter, chosenReader);
       }
       text = encodeURIComponent(
-        `🔊 استمع للآية بصوت ${reciters.find(r => r.id === chosenReader)?.name}:\n${audioURL}`
+        `🔊 استمع للآية بصوت ${
+          reciters.find((r) => r.id === chosenReader)?.name
+        }:\n${audioURL}`
       );
     }
     const currentUrl = encodeURIComponent(window.location.href);
-    let url = "";
+    let url = '';
     if (platform === 'twitter') {
       url = `https://twitter.com/intent/tweet?text=${text}`;
     } else if (platform === 'facebook') {
@@ -516,7 +543,53 @@ function Quran() {
     }
   };
 
-  // ------------------ RENDER ------------------
+  // ------------------ PDF READER VIEW ------------------
+  if (showAllQuran) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <div className="p-4 bg-gray-200 dark:bg-gray-700">
+          <button
+            onClick={() => setShowAllQuran(false)}
+            className="text-teal-600 dark:text-teal-200"
+          >
+            العودة إلى القرآن
+          </button>
+        </div>
+        <div className="flex-1 flex flex-col items-center justify-center p-4 overflow-auto">
+          <Document
+            file={quranPDF}
+            onLoadSuccess={onDocumentLoadSuccess}
+            loading="جاري تحميل ملف القرآن..."
+          >
+            <Page pageNumber={pdfPageNumber} />
+          </Document>
+          {pdfNumPages && (
+            <p className="mt-2 text-gray-700 dark:text-gray-200">
+              الصفحة {pdfPageNumber} من {pdfNumPages}
+            </p>
+          )}
+          <div className="mt-4 flex gap-2">
+            <button
+              onClick={goToPrevPdfPage}
+              disabled={pdfPageNumber <= 1}
+              className="px-3 py-1 bg-teal-500 text-white rounded disabled:opacity-50"
+            >
+              السابق
+            </button>
+            <button
+              onClick={goToNextPdfPage}
+              disabled={pdfNumPages && pdfPageNumber >= pdfNumPages}
+              className="px-3 py-1 bg-teal-500 text-white rounded disabled:opacity-50"
+            >
+              التالي
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ------------------ MAIN RENDER ------------------
   return (
     <div
       className={`min-h-screen p-4 md:p-8 bg-gradient-to-br ${
@@ -577,7 +650,7 @@ function Quran() {
                 <option value="surah">حسب السورة</option>
                 <option value="juz">حسب الجزء</option>
               </select>
-              {effectiveReadingOption === 'juz' && (
+              {readingOption === 'juz' && (
                 <div className="mt-2">
                   <label className="block text-sm mb-1 text-teal-800 dark:text-teal-200">
                     اختر الجزء:
@@ -588,18 +661,26 @@ function Quran() {
                     className="w-full p-2 rounded-lg border bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
                   >
                     {Array.from({ length: 30 }, (_, i) => i + 1).map((juz) => (
-                      <option key={juz} value={juz}>
+                      <option key={`juz-${juz}`} value={juz}>
                         الجزء {juz}
                       </option>
                     ))}
                   </select>
                 </div>
               )}
+              <div className="mt-4">
+                <button
+                  onClick={() => setShowAllQuran(true)}
+                  className="w-full px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                >
+                  قراءة القرآن بالكامل
+                </button>
+              </div>
             </div>
           )}
 
-          {/* Surah list for Quran view when readingOption is "surah" */}
-          {activeTab === 'quran' && effectiveReadingOption === 'surah' && (
+          {/* Surah list (only if readingOption is 'surah') */}
+          {activeTab === 'quran' && readingOption === 'surah' && (
             <>
               <h2
                 className={`text-2xl font-bold ${
@@ -624,7 +705,7 @@ function Quran() {
               )}
               <ul className="max-h-[70vh] overflow-y-auto space-y-2 scrollbar-thin scrollbar-thumb-teal-200 scrollbar-track-transparent">
                 {filteredSurahs.map((surah) => (
-                  <li key={surah.number}>
+                  <li key={`surah-${surah.number}`}>
                     <button
                       className={`w-full text-left py-3 px-4 rounded-lg transition-all duration-200 ${
                         selectedSurah?.number === surah.number
@@ -676,85 +757,88 @@ function Quran() {
             </div>
             {bookmarks.length > 0 ? (
               <div className="space-y-8 max-h-[65vh] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-teal-200 scrollbar-track-transparent">
-                {bookmarks.map((verse) => (
-                  <div
-                    key={verse.numberInSurah}
-                    className={`group relative ${
-                      theme === 'dark'
-                        ? 'bg-gray-700 hover:bg-gray-600'
-                        : 'bg-gray-50 hover:bg-teal-50'
-                    } rounded-xl p-6 transition-colors`}
-                  >
-                    <div className="flex items-start justify-between mb-4">
-                      <span
-                        className={`text-sm font-medium ${
-                          theme === 'dark'
-                            ? 'text-teal-200 bg-gray-600'
-                            : 'text-teal-600 bg-teal-100'
-                        } px-3 py-1 rounded-full`}
-                      >
-                        الآية {verse.numberInSurah}
-                      </span>
-                      {verse.audio && (
-                        <button
-                          onClick={() => {
-                            if (playingAudio === verse.numberInSurah) {
-                              setPlayingAudio(null);
-                            } else {
-                              setPlayingAudio(verse.numberInSurah);
-                            }
-                          }}
-                          className="flex items-center justify-center w-10 h-10 rounded-full bg-teal-500 hover:bg-teal-600 text-white transition-colors"
+                {bookmarks.map((verse) => {
+                  const bookmarkKey = `${verse.number}-${verse.numberInSurah}`;
+                  return (
+                    <div
+                      key={bookmarkKey}
+                      className={`group relative ${
+                        theme === 'dark'
+                          ? 'bg-gray-700 hover:bg-gray-600'
+                          : 'bg-gray-50 hover:bg-teal-50'
+                      } rounded-xl p-6 transition-colors`}
+                    >
+                      <div className="flex items-start justify-between mb-4">
+                        <span
+                          className={`text-sm font-medium ${
+                            theme === 'dark'
+                              ? 'text-teal-200 bg-gray-600'
+                              : 'text-teal-600 bg-teal-100'
+                          } px-3 py-1 rounded-full`}
                         >
-                          {playingAudio === verse.numberInSurah ? (
-                            <FaPause className="w-5 h-5" />
-                          ) : (
-                            <FaPlay className="w-5 h-5" />
-                          )}
+                          الآية {verse.numberInSurah}
+                        </span>
+                        {verse.audio && (
+                          <button
+                            onClick={() => {
+                              if (playingAudio === verse.numberInSurah) {
+                                setPlayingAudio(null);
+                              } else {
+                                setPlayingAudio(verse.numberInSurah);
+                              }
+                            }}
+                            className="flex items-center justify-center w-10 h-10 rounded-full bg-teal-500 hover:bg-teal-600 text-white transition-colors"
+                          >
+                            {playingAudio === verse.numberInSurah ? (
+                              <FaPause className="w-5 h-5" />
+                            ) : (
+                              <FaPlay className="w-5 h-5" />
+                            )}
+                          </button>
+                        )}
+                      </div>
+                      <p
+                        className={`text-right text-4xl leading-loose ${
+                          theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+                        } font-arabic font-selectable mb-2`}
+                      >
+                        {verse.text}
+                      </p>
+                      <div className="flex items-center gap-3 text-sm mt-1">
+                        <button
+                          onClick={() => copyVerseText(verse.text)}
+                          className="flex items-center gap-1 px-2 py-1 bg-teal-200 hover:bg-teal-300 text-teal-800 rounded"
+                        >
+                          <FaCopy />
+                          نسخ
                         </button>
+                        <button
+                          onClick={() => toggleTafsir(verse.numberInSurah)}
+                          className="flex items-center gap-1 px-2 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded"
+                        >
+                          <FaInfoCircle />
+                          تفسير
+                        </button>
+                        <button
+                          onClick={() => removeFavourite(verse)}
+                          className="flex items-center gap-1 px-2 py-1 bg-red-200 hover:bg-red-300 text-red-800 rounded"
+                        >
+                          <FaTimes />
+                          إزالة من المفضلة
+                        </button>
+                      </div>
+                      {verse.audio && playingAudio === verse.numberInSurah && (
+                        <audio
+                          autoPlay
+                          onEnded={() => setPlayingAudio(null)}
+                          className="absolute bottom-4 right-4 w-64"
+                        >
+                          <source src={verse.audio} type="audio/mpeg" />
+                        </audio>
                       )}
                     </div>
-                    <p
-                      className={`text-right text-4xl leading-relaxed ${
-                        theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
-                      } font-arabic font-selectable mb-2`}
-                    >
-                      {verse.text}
-                    </p>
-                    <div className="flex items-center gap-3 text-sm mt-1">
-                      <button
-                        onClick={() => copyVerseText(verse.text)}
-                        className="flex items-center gap-1 px-2 py-1 bg-teal-200 hover:bg-teal-300 text-teal-800 rounded"
-                      >
-                        <FaCopy />
-                        نسخ
-                      </button>
-                      <button
-                        onClick={() => toggleTafsir(verse.numberInSurah)}
-                        className="flex items-center gap-1 px-2 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded"
-                      >
-                        <FaInfoCircle />
-                        تفسير
-                      </button>
-                      <button
-                        onClick={() => removeFavourite(verse)}
-                        className="flex items-center gap-1 px-2 py-1 bg-red-200 hover:bg-red-300 text-red-800 rounded"
-                      >
-                        <FaTimes />
-                        إزالة من المفضلة
-                      </button>
-                    </div>
-                    {verse.audio && playingAudio === verse.numberInSurah && (
-                      <audio
-                        autoPlay
-                        onEnded={() => setPlayingAudio(null)}
-                        className="absolute bottom-4 right-4 w-64"
-                      >
-                        <source src={verse.audio} type="audio/mpeg" />
-                      </audio>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <p
@@ -773,18 +857,18 @@ function Quran() {
             className={`md:col-span-2 ${
               theme === 'dark' ? 'bg-gray-800' : 'bg-white'
             } rounded-xl shadow-lg p-4 md:p-6 backdrop-blur-lg ${
-              effectiveReadingOption === 'juz' ? 'dir-rtl' : ''
+              readingOption === 'juz' ? 'dir-rtl' : ''
             }`}
             dir="rtl"
           >
-            {selectedSurah || effectiveReadingOption === 'juz' ? (
+            {selectedSurah || readingOption === 'juz' ? (
               <>
                 <div
                   className={`mb-6 text-center border-b ${
                     theme === 'dark' ? 'border-gray-700' : 'border-teal-100'
                   } pb-4`}
                 >
-                  {effectiveReadingOption === 'surah' ? (
+                  {readingOption === 'surah' ? (
                     selectedSurah && (
                       <>
                         <h1
@@ -795,7 +879,9 @@ function Quran() {
                           {selectedSurah.name}
                         </h1>
                         <p
-                          className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}
+                          className={`${
+                            theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                          }`}
                         >
                           عدد الآيات: {selectedSurah.numberOfAyahs} |{' '}
                           {selectedSurah.revelationType === 'Meccan'
@@ -814,7 +900,9 @@ function Quran() {
                         الجزء {selectedJuz}
                       </h1>
                       <p
-                        className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}
+                        className={`${
+                          theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                        }`}
                       >
                         قراءة حسب الجزء من القرآن
                       </p>
@@ -857,7 +945,7 @@ function Quran() {
                         theme === 'dark' ? 'text-teal-200' : 'text-teal-800'
                       } mb-4 font-amiri`}
                     >
-                      {effectiveReadingOption === 'surah'
+                      {readingOption === 'surah'
                         ? selectedSurah && selectedSurah.name
                         : `الجزء ${selectedJuz}`}
                     </h2>
@@ -873,7 +961,7 @@ function Quran() {
                           className="p-2 rounded-lg border bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300"
                         >
                           {reciters.map((r) => (
-                            <option key={r.id} value={r.id}>
+                            <option key={`reciter-${r.id}`} value={r.id}>
                               {r.name}
                             </option>
                           ))}
@@ -898,7 +986,7 @@ function Quran() {
                             <div className="flex gap-2 flex-wrap mb-3">
                               {[0.25, 0.5, 1, 1.5, 2].map((spd) => (
                                 <button
-                                  key={spd}
+                                  key={`spd-${spd}`}
                                   onClick={() => setPlaybackRate(spd)}
                                   className={`px-3 py-1 rounded ${
                                     playbackRate === spd
@@ -910,7 +998,9 @@ function Quran() {
                                 </button>
                               ))}
                             </div>
-                            <h3 className="font-bold mb-1">Custom Speed: {playbackRate}x</h3>
+                            <h3 className="font-bold mb-1">
+                              السرعة المخصصة: {playbackRate}x
+                            </h3>
                             <div className="flex items-center gap-2 mb-2">
                               <button
                                 onClick={() =>
@@ -955,11 +1045,13 @@ function Quran() {
                           } rounded-lg`}
                         >
                           <div className="flex gap-2">
-                            {effectiveReadingOption === 'surah' && (
+                            {readingOption === 'surah' && (
                               <>
                                 <button
                                   onClick={handlePreviousSurah}
-                                  disabled={selectedSurah && selectedSurah.number <= 1}
+                                  disabled={
+                                    selectedSurah && selectedSurah.number <= 1
+                                  }
                                   className="px-3 py-2 rounded bg-teal-600 hover:bg-teal-700 text-white disabled:opacity-50"
                                 >
                                   <FaBackward />
@@ -1003,7 +1095,10 @@ function Quran() {
                           </div>
 
                           <div className="flex-1 flex flex-col md:flex-row items-center gap-2">
-                            <span>الوقت المنقضي: {elapsedTime} دقيقة | المتبقي: {remainingTime} دقيقة</span>
+                            <span>
+                              الوقت المنقضي: {elapsedTime} دقيقة | المتبقي:{' '}
+                              {remainingTime} دقيقة
+                            </span>
                             <input
                               type="range"
                               min="0"
@@ -1047,7 +1142,11 @@ function Quran() {
                       </div>
                     ) : (
                       <div className="flex flex-col items-center gap-4">
-                        <p className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'} mb-2`}>
+                        <p
+                          className={`${
+                            theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                          } mb-2`}
+                        >
                           اضغط على زر التشغيل للاستماع للسورة كاملة
                         </p>
                         <button
@@ -1069,7 +1168,9 @@ function Quran() {
                 ) : readingMode ? (
                   <div
                     ref={readingContainerRef}
-                    className={`relative ${isFullScreen ? 'w-full h-screen p-8 overflow-auto' : ''}`}
+                    className={`relative ${
+                      isFullScreen ? 'w-full h-screen p-8 overflow-auto' : ''
+                    }`}
                   >
                     <div className="flex flex-col sm:flex-row items-center justify-between mb-4">
                       <div className="flex items-center gap-4">
@@ -1081,7 +1182,9 @@ function Quran() {
                         >
                           <FaMinus />
                         </button>
-                        <span className="text-gray-700">{readingFontSize}px</span>
+                        <span className="text-gray-700">
+                          {readingFontSize}px
+                        </span>
                         <button
                           onClick={() => setReadingFontSize((prev) => prev + 2)}
                           className="p-2 bg-gray-200 dark:bg-gray-600 rounded-full hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
@@ -1171,14 +1274,18 @@ function Quran() {
                           }}
                         >
                           {paginatedVerses.length > 0 ? (
-                            paginatedVerses.map((verse) => (
-                              <p key={verse.numberInSurah} className="mb-4">
-                                {verse.text}{' '}
-                                <span className="text-base text-gray-500">
-                                  ﴾{verse.numberInSurah}﴿
-                                </span>
-                              </p>
-                            ))
+                            paginatedVerses.map((verse) => {
+                              // Combine number + numberInSurah for unique key
+                              const verseKey = `${verse.number}-${verse.numberInSurah}`;
+                              return (
+                                <p key={verseKey} className="mb-4">
+                                  {verse.text}{' '}
+                                  <span className="text-base text-gray-500">
+                                    ﴾{verse.numberInSurah}﴿
+                                  </span>
+                                </p>
+                              );
+                            })
                           ) : (
                             <p
                               className={`text-center py-12 ${
@@ -1243,113 +1350,128 @@ function Quran() {
                     ) : (
                       <>
                         {paginatedVerses.length > 0 ? (
-                          paginatedVerses.map((verse) => (
-                            <div
-                              key={verse.numberInSurah}
-                              className={`group relative ${
-                                theme === 'dark'
-                                  ? 'bg-gray-700 hover:bg-gray-600'
-                                  : 'bg-gray-50 hover:bg-teal-50'
-                              } rounded-xl p-6 transition-colors`}
-                            >
-                              <div className="flex items-start justify-between mb-4">
-                                <span
-                                  className={`text-sm font-medium ${
-                                    theme === 'dark'
-                                      ? 'text-teal-200 bg-gray-600'
-                                      : 'text-teal-600 bg-teal-100'
-                                  } px-3 py-1 rounded-full`}
-                                >
-                                  الآية {verse.numberInSurah}
-                                </span>
-                                {verse.audio && (
-                                  <button
-                                    onClick={() => {
-                                      if (playingAudio === verse.numberInSurah) {
-                                        setPlayingAudio(null);
-                                      } else {
-                                        setPlayingAudio(verse.numberInSurah);
-                                      }
-                                    }}
-                                    className="flex items-center justify-center w-10 h-10 rounded-full bg-teal-500 hover:bg-teal-600 text-white transition-colors"
-                                  >
-                                    {playingAudio === verse.numberInSurah ? (
-                                      <FaPause className="w-5 h-5" />
-                                    ) : (
-                                      <FaPlay className="w-5 h-5" />
-                                    )}
-                                  </button>
-                                )}
-                              </div>
-                              <p
-                                className={`text-right text-4xl leading-relaxed ${
+                          paginatedVerses.map((verse) => {
+                            const verseKey = `${verse.number}-${verse.numberInSurah}`;
+                            return (
+                              <div
+                                key={verseKey}
+                                className={`group relative ${
                                   theme === 'dark'
-                                    ? 'text-gray-200'
-                                    : 'text-gray-800'
-                                } font-arabic font-selectable mb-2`}
+                                    ? 'bg-gray-700 hover:bg-gray-600'
+                                    : 'bg-gray-50 hover:bg-teal-50'
+                                } rounded-xl p-6 transition-colors`}
                               >
-                                {verse.text}
-                              </p>
-                              <div className="flex items-center gap-3 text-sm mt-1">
-                                <button
-                                  onClick={() => copyVerseText(verse.text)}
-                                  className="flex items-center gap-1 px-2 py-1 bg-teal-200 hover:bg-teal-300 text-teal-800 rounded"
-                                >
-                                  <FaCopy />
-                                  نسخ
-                                </button>
-                                <button
-                                  onClick={() => toggleTafsir(verse.numberInSurah)}
-                                  className="flex items-center gap-1 px-2 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded"
-                                >
-                                  <FaInfoCircle />
-                                  تفسير
-                                </button>
-                                <button
-                                  onClick={() => bookmarkVerse(verse)}
-                                  className="flex items-center gap-1 px-2 py-1 bg-yellow-200 hover:bg-yellow-300 text-yellow-800 rounded"
-                                >
-                                  <FaBookmark />
-                                  مفضلة
-                                </button>
-                                <button
-                                  onClick={() => setShareVerse(verse)}
-                                  className="flex items-center gap-1 px-2 py-1 bg-blue-200 hover:bg-blue-300 text-blue-800 rounded"
-                                >
-                                  <FaShareAlt />
-                                  مشاركة
-                                </button>
-                              </div>
-                              {tafsirOpen[verse.numberInSurah] && (
-                                <div
-                                  className={`mt-2 p-3 border-l-4 border-teal-400 ${
-                                    theme === 'dark'
-                                      ? 'bg-gray-600 text-gray-100'
-                                      : 'bg-gray-100 text-gray-700'
-                                  } rounded`}
-                                >
-                                  <p className="text-sm leading-relaxed">
-                                    <strong>تفسير الآية {verse.numberInSurah}:</strong>
-                                    <br />
-                                    هذا نص افتراضي للتفسير. يمكنك استبداله ببيانات حقيقية من واجهة برمجة تطبيقات التفسير.
-                                  </p>
+                                <div className="flex items-start justify-between mb-4">
+                                  <span
+                                    className={`text-sm font-medium ${
+                                      theme === 'dark'
+                                        ? 'text-teal-200 bg-gray-600'
+                                        : 'text-teal-600 bg-teal-100'
+                                    } px-3 py-1 rounded-full`}
+                                  >
+                                    الآية {verse.numberInSurah}
+                                  </span>
+                                  {verse.audio && (
+                                    <button
+                                      onClick={() => {
+                                        if (
+                                          playingAudio === verse.numberInSurah
+                                        ) {
+                                          setPlayingAudio(null);
+                                        } else {
+                                          setPlayingAudio(verse.numberInSurah);
+                                        }
+                                      }}
+                                      className="flex items-center justify-center w-10 h-10 rounded-full bg-teal-500 hover:bg-teal-600 text-white transition-colors"
+                                    >
+                                      {playingAudio === verse.numberInSurah ? (
+                                        <FaPause className="w-5 h-5" />
+                                      ) : (
+                                        <FaPlay className="w-5 h-5" />
+                                      )}
+                                    </button>
+                                  )}
                                 </div>
-                              )}
-                              {verse.audio && playingAudio === verse.numberInSurah && (
-                                <audio
-                                  autoPlay
-                                  onEnded={() => setPlayingAudio(null)}
-                                  className="absolute bottom-4 right-4 w-64"
+                                <p
+                                  className={`text-right text-4xl leading-loose ${
+                                    theme === 'dark'
+                                      ? 'text-gray-200'
+                                      : 'text-gray-800'
+                                  } font-arabic font-selectable mb-2`}
                                 >
-                                  <source src={verse.audio} type="audio/mpeg" />
-                                </audio>
-                              )}
-                            </div>
-                          ))
+                                  {verse.text}
+                                </p>
+                                <div className="flex items-center gap-3 text-sm mt-1">
+                                  <button
+                                    onClick={() => copyVerseText(verse.text)}
+                                    className="flex items-center gap-1 px-2 py-1 bg-teal-200 hover:bg-teal-300 text-teal-800 rounded"
+                                  >
+                                    <FaCopy />
+                                    نسخ
+                                  </button>
+                                  <button
+                                    onClick={() =>
+                                      toggleTafsir(verse.numberInSurah)
+                                    }
+                                    className="flex items-center gap-1 px-2 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded"
+                                  >
+                                    <FaInfoCircle />
+                                    تفسير
+                                  </button>
+                                  <button
+                                    onClick={() => bookmarkVerse(verse)}
+                                    className="flex items-center gap-1 px-2 py-1 bg-yellow-200 hover:bg-yellow-300 text-yellow-800 rounded"
+                                  >
+                                    <FaBookmark />
+                                    مفضلة
+                                  </button>
+                                  <button
+                                    onClick={() => setShareVerse(verse)}
+                                    className="flex items-center gap-1 px-2 py-1 bg-blue-200 hover:bg-blue-300 text-blue-800 rounded"
+                                  >
+                                    <FaShareAlt />
+                                    مشاركة
+                                  </button>
+                                </div>
+                                {tafsirOpen[verse.numberInSurah] && (
+                                  <div
+                                    className={`mt-2 p-3 border-l-4 border-teal-400 ${
+                                      theme === 'dark'
+                                        ? 'bg-gray-600 text-gray-100'
+                                        : 'bg-gray-100 text-gray-700'
+                                    } rounded`}
+                                  >
+                                    <p className="text-sm leading-relaxed">
+                                      <strong>
+                                        تفسير الآية {verse.numberInSurah}:
+                                      </strong>
+                                      <br />
+                                      هذا نص افتراضي للتفسير. يمكنك استبداله ببيانات حقيقية من واجهة برمجة تطبيقات التفسير.
+                                    </p>
+                                  </div>
+                                )}
+                                {verse.audio &&
+                                  playingAudio === verse.numberInSurah && (
+                                    <audio
+                                      autoPlay
+                                      onEnded={() => setPlayingAudio(null)}
+                                      className="absolute bottom-4 right-4 w-64"
+                                    >
+                                      <source
+                                        src={verse.audio}
+                                        type="audio/mpeg"
+                                      />
+                                    </audio>
+                                  )}
+                              </div>
+                            );
+                          })
                         ) : (
                           <p
                             className={`text-center py-12 ${
-                              theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                              theme === 'dark'
+                                ? 'text-gray-400'
+                                : 'text-gray-500'
                             }`}
                           >
                             لم يتم العثور على آيات.
@@ -1372,7 +1494,12 @@ function Quran() {
                   stroke="currentColor"
                   viewBox="0 0 24 24"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                  />
                 </svg>
                 اختر سورة للبدء
               </div>
@@ -1396,18 +1523,24 @@ function Quran() {
       {shareVerse && activeTab !== 'favourites' && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg w-96">
-            <h2 className="text-xl font-bold mb-4 text-center font-amiri">مشاركة الآية</h2>
+            <h2 className="text-xl font-bold mb-4 text-center font-amiri">
+              مشاركة الآية
+            </h2>
             <p className="mb-4 text-center">{shareVerse.text}</p>
             <div className="flex justify-around gap-4 mb-4">
               <button
                 onClick={() => setShareType('text')}
-                className={`px-4 py-2 rounded ${shareType === 'text' ? 'bg-teal-600 text-white' : 'bg-gray-300'}`}
+                className={`px-4 py-2 rounded ${
+                  shareType === 'text' ? 'bg-teal-600 text-white' : 'bg-gray-300'
+                }`}
               >
                 مشاركة نص
               </button>
               <button
                 onClick={() => setShareType('audio')}
-                className={`px-4 py-2 rounded ${shareType === 'audio' ? 'bg-teal-600 text-white' : 'bg-gray-300'}`}
+                className={`px-4 py-2 rounded ${
+                  shareType === 'audio' ? 'bg-teal-600 text-white' : 'bg-gray-300'
+                }`}
               >
                 مشاركة صوت
               </button>
@@ -1421,7 +1554,7 @@ function Quran() {
                   className="w-full p-2 rounded border"
                 >
                   {reciters.map((reciter) => (
-                    <option key={reciter.id} value={reciter.id}>
+                    <option key={`share-reciter-${reciter.id}`} value={reciter.id}>
                       {reciter.name}
                     </option>
                   ))}
