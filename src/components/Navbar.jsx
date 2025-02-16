@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import emailjs from 'emailjs-com';
 import { useTheme } from '../context/ThemeContext';
 import { FaExclamationTriangle, FaMoon, FaSun } from 'react-icons/fa';
+import logo from '../assets/praying.png';
 
 function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -111,13 +112,10 @@ function Navbar() {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            {/* Logo with Snake Animation */}
-            <div className="flex-shrink-0 transform hover:scale-105 transition-transform duration-300 relative">
-              <Link
-                to="/"
-                className="text-2xl font-bold text-teal-800 dark:text-teal-200 font-amiri group nav-link"
-              >
-                القرآن والحديث
+            {/* Logo with Image */}
+            <div className="flex-shrink-0 transform hover:scale-105 transition-transform duration-300">
+              <Link to="/">
+                <img src={logo} alt="Logo" className="h-10 w-auto" />
               </Link>
             </div>
 
@@ -129,23 +127,18 @@ function Navbar() {
               >
                 القرآن الكريم
               </Link>
-
               <Link
                 to="/hadith"
                 className="nav-link text-teal-700 dark:text-teal-300 px-3 py-2 transition-all duration-300"
               >
                 الحديث الشريف
               </Link>
-
-              {/* TASBIH LINK */}
               <Link
                 to="/tasbih"
                 className="nav-link text-teal-700 dark:text-teal-300 px-3 py-2 transition-all duration-300"
               >
                 السبحة
               </Link>
-
-              {/* Report Issue Button */}
               <button
                 onClick={() => setShowReportIssue(true)}
                 className="flex items-center text-teal-700 dark:text-teal-300 px-3 py-2 transition-all duration-300"
@@ -153,8 +146,6 @@ function Navbar() {
                 <FaExclamationTriangle className="ml-2" />
                 <span className="nav-link">الإبلاغ عن مشكلة</span>
               </button>
-
-              {/* Theme Toggle */}
               <button
                 onClick={toggleTheme}
                 className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-transform duration-300 transform hover:rotate-180"
@@ -183,19 +174,9 @@ function Navbar() {
                   stroke="currentColor"
                 >
                   {isOpen ? (
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   ) : (
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4 6h16M4 12h16M4 18h16"
-                    />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                   )}
                 </svg>
               </button>
@@ -271,16 +252,8 @@ function Navbar() {
                   required
                 />
               </div>
-              <input
-                type="hidden"
-                name="timestamp"
-                value={new Date().toLocaleString('ar-EG')}
-              />
-              <input
-                type="hidden"
-                name="user_counter"
-                value="1"
-              />
+              <input type="hidden" name="timestamp" value={new Date().toLocaleString('ar-EG')} />
+              <input type="hidden" name="user_counter" value="1" />
               <div className="flex justify-between">
                 <button
                   type="button"

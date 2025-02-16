@@ -29,8 +29,8 @@ import {
 
 // 1) React-PDF imports
 import { Document, Page, pdfjs } from 'react-pdf';
-// Configure PDF worker using pdfjs-dist’s built worker (fixes the cdn error):
-pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.js', import.meta.url).toString();
+// Must configure the PDF worker for Vite or CRA:
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.js`;
 
 // 2) Import your PDF from src/assets
 import quranPDF from '../assets/quran.pdf';
@@ -94,7 +94,7 @@ function Quran() {
   const [shareType, setShareType] = useState('text'); // 'text' or 'audio'
   const [chosenReader, setChosenReader] = useState('alafasy');
 
-  // 3) PDF READER VIEW State
+  // 3) PDF Reading State
   const [showAllQuran, setShowAllQuran] = useState(false);
   const [pdfNumPages, setPdfNumPages] = useState(null);
   const [pdfPageNumber, setPdfPageNumber] = useState(1);
@@ -256,9 +256,9 @@ function Quran() {
     }
   }, [readingOption, selectedJuz]);
 
-  // ------------------ AUTO-PLAY LOGIC FOR LISTEN MODE ------------------
+  // ------------------ AUTO-PLAY LOGIC ------------------
   useEffect(() => {
-    if (listenMode && verses.length > 0 && autoPlayRef.current) {
+    if (listenMode && selectedSurah && autoPlayRef.current && verses.length > 0) {
       setIsPlayingAll(true);
       setIsPaused(false);
       setCurrentPlayingIndex(0);
@@ -270,7 +270,7 @@ function Quran() {
       }
       autoPlayRef.current = false;
     }
-  }, [verses, listenMode, readingOption]);
+  }, [verses, listenMode, selectedSurah]);
 
   // ------------------ AUDIO TRACKING ------------------
   useEffect(() => {
@@ -318,15 +318,10 @@ function Quran() {
     setCurrentPage(1);
   };
 
-  // Updated toggleListenMode to set autoPlayRef if turning on listen mode
   const toggleListenMode = () => {
-    const newListenMode = !listenMode;
-    setListenMode(newListenMode);
+    setListenMode((prev) => !prev);
     setReadingMode(false);
     setIsPlayingAll(false);
-    if (newListenMode) {
-      autoPlayRef.current = true;
-    }
   };
 
   useEffect(() => {
@@ -1599,7 +1594,7 @@ function Quran() {
       {/* Feedback Toast */}
       {copyMessage && (
         <div className="fixed bottom-4 right-4 bg-teal-600 text-white py-2 px-4 rounded shadow-lg transition-all">
-          {copyMessage}
+          {copyMessage}s
         </div>
       )}
     </div>
