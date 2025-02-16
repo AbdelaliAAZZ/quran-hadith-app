@@ -1594,7 +1594,7 @@ function Quran() {
       {/* Feedback Toast */}
       {copyMessage && (
         <div className="fixed bottom-4 right-4 bg-teal-600 text-white py-2 px-4 rounded shadow-lg transition-all">
-          {copyMessage}s
+          {copyMessage}
         </div>
       )}
     </div>
