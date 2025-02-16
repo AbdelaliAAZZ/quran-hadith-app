@@ -7,56 +7,65 @@ import { FaExclamationTriangle, FaMoon, FaSun } from 'react-icons/fa';
 function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const { theme, setTheme } = useTheme();
-  // Remove settings state since we are not using settings anymore
   const [showReportIssue, setShowReportIssue] = useState(false);
   const [reportMessage, setReportMessage] = useState('');
   const [reportEmail, setReportEmail] = useState('');
-  const [reportCountry, setReportCountry] = useState('');
   const [toastMessage, setToastMessage] = useState('');
-
-  // Placeholders are added for inputs below
 
   const toggleTheme = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark');
   };
 
-  // EmailJS configuration with your provided credentials
+  // EmailJS configuration
   const SERVICE_ID = 'service_1vazxgr';
   const TEMPLATE_ID = 'template_4erx1vp';
   const PUBLIC_KEY = 'XXRK4kg3nQWZEdb4t';
-  
+
   const formRef = useRef();
 
   const handleReportSubmit = (e) => {
     e.preventDefault();
-    if (!reportEmail || !reportMessage || !reportCountry) {
+    if (!reportEmail || !reportMessage) {
       setToastMessage('يرجى تعبئة جميع الحقول');
       setTimeout(() => setToastMessage(''), 3000);
       return;
     }
-    emailjs.sendForm(SERVICE_ID, TEMPLATE_ID, formRef.current, PUBLIC_KEY)
-      .then((result) => {
+    emailjs
+      .sendForm(SERVICE_ID, TEMPLATE_ID, formRef.current, PUBLIC_KEY)
+      .then(() => {
         setToastMessage('تم إرسال التقرير بنجاح');
         setTimeout(() => setToastMessage(''), 3000);
-      }, (error) => {
+      })
+      .catch(() => {
         setToastMessage('فشل إرسال التقرير');
         setTimeout(() => setToastMessage(''), 3000);
       });
     formRef.current.reset();
     setReportEmail('');
     setReportMessage('');
-    setReportCountry('');
     setShowReportIssue(false);
   };
 
   return (
     <>
-      {/* Inline styles for snake animation on hover */}
+      {/* Custom CSS Animations and Hover Effects */}
       <style>{`
         @keyframes snake {
           0% { width: 0; }
           50% { width: 100%; }
           100% { width: 0; }
+        }
+        @keyframes slideDown {
+          from { opacity: 0; transform: translateY(-20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes popIn {
+          from { opacity: 0; transform: scale(0.8); }
+          to { opacity: 1; transform: scale(1); }
+        }
+        @keyframes slideUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
         }
         .animate-snake::after {
           content: '';
@@ -67,82 +76,104 @@ function Navbar() {
           background: #38b2ac;
           animation: snake 1.5s infinite;
         }
+        .animate-slide-down {
+          animation: slideDown 0.3s ease-out forwards;
+        }
+        .animate-pop-in {
+          animation: popIn 0.3s ease-out forwards;
+        }
+        .animate-slide-up {
+          animation: slideUp 0.3s ease-out forwards;
+        }
+        .nav-link {
+          position: relative;
+          overflow: hidden;
+        }
+        .nav-link::after {
+          content: '';
+          position: absolute;
+          bottom: 0;
+          left: 50%;
+          width: 0;
+          height: 2px;
+          background: #38b2ac;
+          transition: all 0.3s ease;
+        }
+        .nav-link:hover::after {
+          left: 0;
+          width: 100%;
+        }
       `}</style>
-      
-      <nav className="bg-white dark:bg-gray-800 backdrop-blur-lg bg-opacity-80 shadow-lg sticky top-0 z-50" dir="rtl">
+
+      <nav
+        className="bg-white dark:bg-gray-800 backdrop-blur-lg bg-opacity-90 shadow-lg sticky top-0 z-50"
+        dir="rtl"
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            {/* قسم الشعار مع تأثير الثعبان عند المرور */}
+            {/* Logo with Snake Animation */}
             <div className="flex-shrink-0 transform hover:scale-105 transition-transform duration-300 relative">
               <Link
                 to="/"
-                className="text-2xl font-bold text-teal-800 dark:text-teal-200 font-amiri group animate-snake"
+                className="text-2xl font-bold text-teal-800 dark:text-teal-200 font-amiri group nav-link"
               >
                 القرآن والحديث
-                <span className="inline-block ml-1">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="w-6 h-6 inline-block animate-pulse"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
-                  </svg>
-                </span>
               </Link>
             </div>
 
-            {/* قائمة سطح المكتب */}
+            {/* Desktop Menu */}
             <div className="hidden md:flex items-center space-x-8">
               <Link
                 to="/quran"
-                className="relative text-teal-700 dark:text-teal-300 px-3 py-2 group transition-all duration-300"
+                className="nav-link text-teal-700 dark:text-teal-300 px-3 py-2 transition-all duration-300"
               >
                 القرآن الكريم
-                <span className="absolute bottom-0 right-0 w-0 h-1 bg-teal-600 transition-all duration-300 group-hover:w-full"></span>
               </Link>
 
               <Link
                 to="/hadith"
-                className="relative text-teal-700 dark:text-teal-300 px-3 py-2 group transition-all duration-300"
+                className="nav-link text-teal-700 dark:text-teal-300 px-3 py-2 transition-all duration-300"
               >
                 الحديث الشريف
-                <span className="absolute bottom-0 right-0 w-0 h-1 bg-teal-600 transition-all duration-300 group-hover:w-full"></span>
               </Link>
 
-              {/* زر الإبلاغ عن مشكلة */}
+              {/* TASBIH LINK */}
+              <Link
+                to="/tasbih"
+                className="nav-link text-teal-700 dark:text-teal-300 px-3 py-2 transition-all duration-300"
+              >
+                السبحة
+              </Link>
+
+              {/* Report Issue Button */}
               <button
                 onClick={() => setShowReportIssue(true)}
-                className="flex items-center text-teal-700 dark:text-teal-300 px-3 py-2 group transition-all duration-300"
+                className="flex items-center text-teal-700 dark:text-teal-300 px-3 py-2 transition-all duration-300"
               >
                 <FaExclamationTriangle className="ml-2" />
-                <span className="relative">
-                  الإبلاغ عن مشكلة
-                  <span className="absolute bottom-0 right-0 w-full h-0.5 bg-teal-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300"></span>
-                </span>
+                <span className="nav-link">الإبلاغ عن مشكلة</span>
               </button>
 
-              {/* تبديل الثيم */}
+              {/* Theme Toggle */}
               <button
                 onClick={toggleTheme}
-                className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-300 transform hover:rotate-180"
+                className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-transform duration-300 transform hover:rotate-180"
               >
                 {theme === 'dark' ? <FaSun /> : <FaMoon />}
               </button>
             </div>
 
-            {/* زر قائمة الهاتف المحمول */}
+            {/* Mobile Menu Button */}
             <div className="flex md:hidden items-center space-x-2">
               <button
                 onClick={toggleTheme}
-                className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 transform hover:scale-110 transition-all duration-300"
+                className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 transition-transform duration-300 transform hover:scale-110"
               >
                 {theme === 'dark' ? <FaSun /> : <FaMoon />}
               </button>
               <button
-                onClick={() => setIsOpen(!isOpen)}
-                className="inline-flex items-center justify-center p-2 rounded-md text-teal-700 dark:text-teal-300 transform hover:scale-110 transition-all duration-300"
+                onClick={() => setIsOpen((prev) => !prev)}
+                className="inline-flex items-center justify-center p-2 rounded-md text-teal-700 dark:text-teal-300 transition-transform duration-300 transform hover:scale-110"
               >
                 <svg
                   className="h-6 w-6"
@@ -152,9 +183,19 @@ function Navbar() {
                   stroke="currentColor"
                 >
                   {isOpen ? (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
                   ) : (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 6h16M4 12h16M4 18h16"
+                    />
                   )}
                 </svg>
               </button>
@@ -162,25 +203,31 @@ function Navbar() {
           </div>
         </div>
 
-        {/* قائمة الهاتف المحمول */}
+        {/* Mobile Menu */}
         {isOpen && (
           <div className="md:hidden bg-white dark:bg-gray-800 backdrop-blur-lg bg-opacity-95 animate-slide-down">
             <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
               <Link
                 to="/quran"
-                className="block text-teal-700 dark:text-teal-300 hover:text-teal-900 dark:hover:text-teal-100 hover:bg-teal-50 dark:hover:bg-gray-700 px-3 py-2 rounded-md text-base font-medium text-right"
+                className="block nav-link text-teal-700 dark:text-teal-300 hover:text-teal-900 dark:hover:text-teal-100 hover:bg-teal-50 dark:hover:bg-gray-700 px-3 py-2 rounded-md text-base font-medium text-right"
               >
-                القرآن
+                القرآن الكريم
               </Link>
               <Link
                 to="/hadith"
-                className="block text-teal-700 dark:text-teal-300 hover:text-teal-900 dark:hover:text-teal-100 hover:bg-teal-50 dark:hover:bg-gray-700 px-3 py-2 rounded-md text-base font-medium text-right"
+                className="block nav-link text-teal-700 dark:text-teal-300 hover:text-teal-900 dark:hover:text-teal-100 hover:bg-teal-50 dark:hover:bg-gray-700 px-3 py-2 rounded-md text-base font-medium text-right"
               >
-                الحديث
+                الحديث الشريف
+              </Link>
+              <Link
+                to="/tasbih"
+                className="block nav-link text-teal-700 dark:text-teal-300 hover:text-teal-900 dark:hover:text-teal-100 hover:bg-teal-50 dark:hover:bg-gray-700 px-3 py-2 rounded-md text-base font-medium text-right"
+              >
+                السبحة
               </Link>
               <button
                 onClick={() => setShowReportIssue(true)}
-                className="flex items-center w-full text-teal-700 dark:text-teal-300 hover:text-teal-900 dark:hover:text-teal-100 hover:bg-teal-50 dark:hover:bg-gray-700 px-3 py-2 rounded-md text-base font-medium text-right"
+                className="flex items-center w-full nav-link text-teal-700 dark:text-teal-300 hover:text-teal-900 dark:hover:text-teal-100 hover:bg-teal-50 dark:hover:bg-gray-700 px-3 py-2 rounded-md text-base font-medium text-right"
               >
                 <FaExclamationTriangle className="ml-2" />
                 الإبلاغ عن مشكلة
@@ -190,7 +237,7 @@ function Navbar() {
         )}
       </nav>
 
-      {/* Report Issue Modal with EmailJS */}
+      {/* Report Issue Modal */}
       {showReportIssue && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-sm w-full animate-pop-in">
@@ -212,20 +259,6 @@ function Navbar() {
               </div>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 text-right">
-                  الدولة:
-                </label>
-                <input
-                  type="text"
-                  name="report_country"
-                  value={reportCountry}
-                  onChange={(e) => setReportCountry(e.target.value)}
-                  placeholder="أدخل دولتك"
-                  className="w-full p-2 border rounded-md bg-gray-100 dark:bg-gray-700 text-sm focus:outline-none text-right"
-                  required
-                />
-              </div>
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 text-right">
                   وصف المشكلة:
                 </label>
                 <textarea
@@ -238,11 +271,10 @@ function Navbar() {
                   required
                 />
               </div>
-              {/* Hidden inputs for timestamp and user counter */}
               <input
                 type="hidden"
                 name="timestamp"
-                value={new Date().toLocaleString("ar-EG")}
+                value={new Date().toLocaleString('ar-EG')}
               />
               <input
                 type="hidden"

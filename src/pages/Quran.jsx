@@ -29,8 +29,8 @@ import {
 
 // 1) React-PDF imports
 import { Document, Page, pdfjs } from 'react-pdf';
-// Must configure the PDF worker for Vite or CRA:
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.js`;
+// Configure PDF worker using pdfjs-dist’s built worker (fixes the cdn error):
+pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.js', import.meta.url).toString();
 
 // 2) Import your PDF from src/assets
 import quranPDF from '../assets/quran.pdf';
@@ -94,7 +94,7 @@ function Quran() {
   const [shareType, setShareType] = useState('text'); // 'text' or 'audio'
   const [chosenReader, setChosenReader] = useState('alafasy');
 
-  // 3) PDF Reading State
+  // 3) PDF READER VIEW State
   const [showAllQuran, setShowAllQuran] = useState(false);
   const [pdfNumPages, setPdfNumPages] = useState(null);
   const [pdfPageNumber, setPdfPageNumber] = useState(1);
@@ -256,9 +256,9 @@ function Quran() {
     }
   }, [readingOption, selectedJuz]);
 
-  // ------------------ AUTO-PLAY LOGIC ------------------
+  // ------------------ AUTO-PLAY LOGIC FOR LISTEN MODE ------------------
   useEffect(() => {
-    if (listenMode && selectedSurah && autoPlayRef.current && verses.length > 0) {
+    if (listenMode && verses.length > 0 && autoPlayRef.current) {
       setIsPlayingAll(true);
       setIsPaused(false);
       setCurrentPlayingIndex(0);
@@ -270,7 +270,7 @@ function Quran() {
       }
       autoPlayRef.current = false;
     }
-  }, [verses, listenMode, selectedSurah]);
+  }, [verses, listenMode, readingOption]);
 
   // ------------------ AUDIO TRACKING ------------------
   useEffect(() => {
@@ -318,10 +318,15 @@ function Quran() {
     setCurrentPage(1);
   };
 
+  // Updated toggleListenMode to set autoPlayRef if turning on listen mode
   const toggleListenMode = () => {
-    setListenMode((prev) => !prev);
+    const newListenMode = !listenMode;
+    setListenMode(newListenMode);
     setReadingMode(false);
     setIsPlayingAll(false);
+    if (newListenMode) {
+      autoPlayRef.current = true;
+    }
   };
 
   useEffect(() => {
