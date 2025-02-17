@@ -3,23 +3,27 @@ import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import Quran from './pages/Quran';
 import Hadith from './pages/Hadith';
-import Tasbih from './pages/Tasbih'; // <-- Import new Tasbih component
+import Tasbih from './pages/Tasbih';
+import HijriCalendar from './pages/HijriCalendar'; // New calendar page
 import { useTheme } from './context/ThemeContext';
 
 function App() {
   const { theme } = useTheme();
 
   return (
-    <div className={theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
+    <div
+      className={
+        theme === 'dark' ? 'bg-gray-900 text-white min-h-screen' : 'bg-white text-black min-h-screen'
+      }
+    >
       <Navbar />
-      <main>
+      <main className="py-8">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/quran" element={<Quran />} />
           <Route path="/hadith" element={<Hadith />} />
-          
-          {/* New Tasbih Route */}
           <Route path="/tasbih" element={<Tasbih />} />
+          <Route path="/calendar" element={<HijriCalendar />} />
         </Routes>
       </main>
       <footer

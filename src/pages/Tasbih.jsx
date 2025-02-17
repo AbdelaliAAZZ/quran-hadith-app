@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { GiPrayerBeads } from 'react-icons/gi';
+import { FaCheckCircle } from 'react-icons/fa';
 
 const defaultDhikrList = [
   {
@@ -27,8 +28,9 @@ const defaultDhikrList = [
 
 function Tasbih() {
   const [dhikrList, setDhikrList] = useState(defaultDhikrList);
+  const [notification, setNotification] = useState(null);
 
-  // On mount, load saved counters and merge with default icons/labels
+  // Load saved data from localStorage on mount
   useEffect(() => {
     const saved = localStorage.getItem('tasbihData');
     if (saved) {
@@ -43,20 +45,33 @@ function Tasbih() {
     }
   }, []);
 
-  // Save only id, count, and target to local storage whenever dhikrList changes
+  // Save data to localStorage whenever dhikrList changes
   useEffect(() => {
     const toStore = dhikrList.map(({ id, count, target }) => ({ id, count, target }));
     localStorage.setItem('tasbihData', JSON.stringify(toStore));
   }, [dhikrList]);
 
-  // Increment a single dhikr counter
+  // Clear notification after 3 seconds
+  useEffect(() => {
+    if (notification) {
+      const timeout = setTimeout(() => {
+        setNotification(null);
+      }, 3000);
+      return () => clearTimeout(timeout);
+    }
+  }, [notification]);
+
+  // Increment counter and show a custom notification when target is reached
   const handleDhikrIncrement = (id) => {
     setDhikrList((prevList) =>
       prevList.map((dhikr) => {
         if (dhikr.id === id) {
           const newCount = dhikr.count + 1;
           if (newCount === dhikr.target) {
-            alert(`لقد وصلت إلى العدد المطلوب (${dhikr.target}) لـ: ${dhikr.label}`);
+            setNotification({
+              message: `لقد وصلت إلى العدد المطلوب (${dhikr.target}) لـ: ${dhikr.label}`,
+              type: 'success',
+            });
           }
           return { ...dhikr, count: newCount };
         }
@@ -65,14 +80,26 @@ function Tasbih() {
     );
   };
 
-  // Reset a single dhikr
+  // Undo last increment (subtract 1 if possible)
+  const handleUndo = (id) => {
+    setDhikrList((prevList) =>
+      prevList.map((dhikr) => {
+        if (dhikr.id === id && dhikr.count > 0) {
+          return { ...dhikr, count: dhikr.count - 1 };
+        }
+        return dhikr;
+      })
+    );
+  };
+
+  // Reset a single counter
   const resetDhikr = (id) => {
     setDhikrList((prevList) =>
       prevList.map((dhikr) => (dhikr.id === id ? { ...dhikr, count: 0 } : dhikr))
     );
   };
 
-  // Change the target count for a dhikr
+  // Change target count for a counter
   const handleTargetChange = (id, newTarget) => {
     setDhikrList((prevList) =>
       prevList.map((dhikr) =>
@@ -90,19 +117,23 @@ function Tasbih() {
 
   return (
     <div className="min-h-screen p-4 flex flex-col items-center justify-center bg-gradient-to-b from-gray-100 to-gray-200 dark:from-gray-900 dark:to-gray-800">
+      {notification && (
+        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 flex items-center bg-green-500 text-white px-4 py-2 rounded shadow-lg">
+          <FaCheckCircle className="w-6 h-6 mr-2" />
+          <span>{notification.message}</span>
+        </div>
+      )}
       <h1 className="text-3xl font-bold mb-6 text-teal-700 dark:text-teal-300 font-amiri animate-pulse">
         السبحة الإلكترونية
       </h1>
 
       <div className="max-w-3xl w-full space-y-6">
         {dhikrList.map((dhikr) => {
-          const progress = dhikr.target > 0
-            ? Math.min((dhikr.count / dhikr.target) * 100, 100)
-            : 0;
+          const progress = dhikr.target > 0 ? Math.min((dhikr.count / dhikr.target) * 100, 100) : 0;
           return (
             <div
               key={dhikr.id}
-              className="p-4 rounded-lg shadow-lg bg-white dark:bg-gray-800 transform transition-all hover:scale-105 hover:shadow-2xl animate-slide-up"
+              className="p-4 rounded-lg shadow-lg bg-white dark:bg-gray-800 transition-transform hover:scale-105"
             >
               <div className="flex flex-col sm:flex-row justify-between items-center mb-3">
                 <div className="flex items-center space-x-3">
@@ -117,7 +148,7 @@ function Tasbih() {
                   <label className="text-sm text-gray-700 dark:text-gray-300">الهدف:</label>
                   <input
                     type="number"
-                    className="w-20 p-1 border rounded dark:bg-gray-700 dark:text-gray-200 text-center"
+                    className="w-20 p-1 border rounded bg-white dark:bg-gray-700 dark:text-gray-200 text-center"
                     value={dhikr.target}
                     onChange={(e) =>
                       handleTargetChange(dhikr.id, parseInt(e.target.value) || 0)
@@ -143,6 +174,12 @@ function Tasbih() {
                     className="px-4 py-2 bg-teal-500 text-white rounded hover:bg-teal-600 transition-transform active:scale-95"
                   >
                     +1
+                  </button>
+                  <button
+                    onClick={() => handleUndo(dhikr.id)}
+                    className="px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600 transition-transform active:scale-95"
+                  >
+                    تراجع
                   </button>
                   <button
                     onClick={() => resetDhikr(dhikr.id)}

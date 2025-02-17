@@ -139,6 +139,12 @@ function Navbar() {
               >
                 السبحة
               </Link>
+              <Link
+                to="/calendar"
+                className="nav-link text-teal-700 dark:text-teal-300 px-3 py-2 transition-all duration-300"
+              >
+                التقويم
+              </Link>
               <button
                 onClick={() => setShowReportIssue(true)}
                 className="flex items-center text-teal-700 dark:text-teal-300 px-3 py-2 transition-all duration-300"
@@ -174,9 +180,19 @@ function Navbar() {
                   stroke="currentColor"
                 >
                   {isOpen ? (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
                   ) : (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 6h16M4 12h16M4 18h16"
+                    />
                   )}
                 </svg>
               </button>
@@ -205,6 +221,12 @@ function Navbar() {
                 className="block nav-link text-teal-700 dark:text-teal-300 hover:text-teal-900 dark:hover:text-teal-100 hover:bg-teal-50 dark:hover:bg-gray-700 px-3 py-2 rounded-md text-base font-medium text-right"
               >
                 السبحة
+              </Link>
+              <Link
+                to="/calendar"
+                className="block nav-link text-teal-700 dark:text-teal-300 hover:text-teal-900 dark:hover:text-teal-100 hover:bg-teal-50 dark:hover:bg-gray-700 px-3 py-2 rounded-md text-base font-medium text-right"
+              >
+                التقويم
               </Link>
               <button
                 onClick={() => setShowReportIssue(true)}
