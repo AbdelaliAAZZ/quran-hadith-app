@@ -27,15 +27,18 @@ import {
   FaWhatsapp,
 } from 'react-icons/fa';
 
-// 1) React-PDF imports
-import { Document, Page, pdfjs } from 'react-pdf';
-// Must configure the PDF worker for Vite or CRA:
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.js`;
+// ------------------ Updated PDF Viewer Imports ------------------
+import { Viewer, Worker } from '@react-pdf-viewer/core';
+import { defaultLayoutPlugin } from '@react-pdf-viewer/default-layout';
+import '@react-pdf-viewer/core/lib/styles/index.css';
+import '@react-pdf-viewer/default-layout/lib/styles/index.css';
 
-// 2) Import your PDF from src/assets
-import quranPDF from '../assets/quran.pdf';
+const pdfjsWorkerUrl = `https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js`;
 
 function Quran() {
+  // Initialize the default layout plugin inside the component
+  const defaultLayoutPluginInstance = defaultLayoutPlugin();
+
   // ------------------ STATE ------------------
   const [surahs, setSurahs] = useState([]);
   const [selectedSurah, setSelectedSurah] = useState(null);
@@ -94,22 +97,8 @@ function Quran() {
   const [shareType, setShareType] = useState('text'); // 'text' or 'audio'
   const [chosenReader, setChosenReader] = useState('alafasy');
 
-  // 3) PDF Reading State
+  // ------------------ PDF READER STATE ------------------
   const [showAllQuran, setShowAllQuran] = useState(false);
-  const [pdfNumPages, setPdfNumPages] = useState(null);
-  const [pdfPageNumber, setPdfPageNumber] = useState(1);
-
-  // For PDF: handle onLoadSuccess
-  const onDocumentLoadSuccess = ({ numPages }) => {
-    setPdfNumPages(numPages);
-    setPdfPageNumber(1);
-  };
-  const goToPrevPdfPage = () => {
-    setPdfPageNumber((prev) => Math.max(prev - 1, 1));
-  };
-  const goToNextPdfPage = () => {
-    setPdfPageNumber((prev) => Math.min(prev + 1, pdfNumPages || 1));
-  };
 
   const { theme } = useTheme();
 
@@ -131,9 +120,6 @@ function Quran() {
     'Amiri',
     'Reem Kufi',
     'Lateef',
-    'Scheherazade',
-    'Noto Naskh Arabic',
-    'KFGQPC Uthmanic Script',
   ];
 
   // ------------------ LOAD BOOKMARKS FROM LOCALSTORAGE ------------------
@@ -234,6 +220,7 @@ function Quran() {
     setVerseFilter('');
     setCurrentPage(1);
     setIsPlayingAll(false);
+    // Always disable listen mode on surah click
     setListenMode(false);
     fetchVerses(surah.number);
     if (mainContentRef.current) {
@@ -253,6 +240,13 @@ function Quran() {
   useEffect(() => {
     if (readingOption === 'juz') {
       fetchJuz(selectedJuz);
+    }
+  }, [readingOption, selectedJuz]);
+
+  // ------------------ Disable Listen Mode for Juz 2 ------------------
+  useEffect(() => {
+    if (readingOption === 'juz' && selectedJuz === 2) {
+      setListenMode(false);
     }
   }, [readingOption, selectedJuz]);
 
@@ -319,6 +313,11 @@ function Quran() {
   };
 
   const toggleListenMode = () => {
+    // Do not allow listen mode when juz 2 is selected
+    if (readingOption === 'juz' && selectedJuz === 2) {
+      setListenMode(false);
+      return;
+    }
     setListenMode((prev) => !prev);
     setReadingMode(false);
     setIsPlayingAll(false);
@@ -486,7 +485,6 @@ function Quran() {
 
   // ------------------ FAVOURITE FUNCTIONS ------------------
   const bookmarkVerse = (verse) => {
-    // Use a more unique key for bookmarks to avoid duplicates:
     const bookmarkKey = `${verse.number}-${verse.numberInSurah}`;
     const existing = bookmarks.find((b) => `${b.number}-${b.numberInSurah}` === bookmarkKey);
     if (!existing) {
@@ -513,7 +511,6 @@ function Quran() {
     let text = encodeURIComponent(shareVerse.text);
     if (shareType === 'audio') {
       let audioURL = shareVerse.audio;
-      // Replace the current reciter in the URL with the chosen one if needed
       if (audioURL && reciter !== chosenReader) {
         audioURL = audioURL.replace(reciter, chosenReader);
       }
@@ -543,7 +540,7 @@ function Quran() {
     }
   };
 
-  // ------------------ PDF READER VIEW ------------------
+  // ------------------ PDF READER VIEW (Updated) ------------------
   if (showAllQuran) {
     return (
       <div className="min-h-screen flex flex-col">
@@ -556,34 +553,21 @@ function Quran() {
           </button>
         </div>
         <div className="flex-1 flex flex-col items-center justify-center p-4 overflow-auto">
-          <Document
-            file={quranPDF}
-            onLoadSuccess={onDocumentLoadSuccess}
-            loading="جاري تحميل ملف القرآن..."
-          >
-            <Page pageNumber={pdfPageNumber} />
-          </Document>
-          {pdfNumPages && (
-            <p className="mt-2 text-gray-700 dark:text-gray-200">
-              الصفحة {pdfPageNumber} من {pdfNumPages}
-            </p>
-          )}
-          <div className="mt-4 flex gap-2">
-            <button
-              onClick={goToPrevPdfPage}
-              disabled={pdfPageNumber <= 1}
-              className="px-3 py-1 bg-teal-500 text-white rounded disabled:opacity-50"
-            >
-              السابق
-            </button>
-            <button
-              onClick={goToNextPdfPage}
-              disabled={pdfNumPages && pdfPageNumber >= pdfNumPages}
-              className="px-3 py-1 bg-teal-500 text-white rounded disabled:opacity-50"
-            >
-              التالي
-            </button>
-          </div>
+          <Worker workerUrl={pdfjsWorkerUrl}>
+            <Viewer
+              fileUrl="/book1.pdf"
+              plugins={[defaultLayoutPluginInstance]}
+              localization={{
+                scrollMode: {
+                  horizontalScrolling: 'التمرير الأفقي',
+                  verticalScrolling: 'التمرير الرأسي',
+                },
+                search: {
+                  searchPlaceholder: 'ابحث في النص...',
+                }
+              }}
+            />
+          </Worker>
         </div>
       </div>
     );
@@ -601,12 +585,11 @@ function Quran() {
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
         {/* SIDEBAR */}
         <aside
-          className={`
-            block md:col-span-1
-            ${theme === 'dark' ? 'bg-gray-800' : 'bg-white'}
-            rounded-xl shadow-lg p-4 md:p-6 backdrop-blur-lg
-            ${theme === 'dark' ? 'bg-opacity-90' : 'bg-opacity-80'}
-          `}
+          className={`block md:col-span-1 ${
+            theme === 'dark' ? 'bg-gray-800' : 'bg-white'
+          } rounded-xl shadow-lg p-4 md:p-6 backdrop-blur-lg ${
+            theme === 'dark' ? 'bg-opacity-90' : 'bg-opacity-80'
+          }`}
         >
           {/* Tabs for Quran & Favourites */}
           <div className="mb-4 flex justify-around">
@@ -737,7 +720,6 @@ function Quran() {
 
         {/* MAIN CONTENT */}
         {activeTab === 'favourites' ? (
-          // FAVOURITE VERSES VIEW (No share button)
           <section
             className={`md:col-span-2 ${
               theme === 'dark' ? 'bg-gray-800' : 'bg-white'
@@ -851,7 +833,6 @@ function Quran() {
             )}
           </section>
         ) : (
-          // Quran Reading View (Card-style) – Always use RTL for Arabic
           <section
             ref={mainContentRef}
             className={`md:col-span-2 ${
@@ -922,19 +903,22 @@ function Quran() {
                       <FaBook className="text-lg" />
                       {readingMode ? 'الخروج من وضع القراءة' : 'دخول وضع القراءة'}
                     </button>
-                    <button
-                      onClick={toggleListenMode}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-                        listenMode
-                          ? 'bg-teal-600 text-white'
-                          : theme === 'dark'
-                          ? 'bg-gray-700 text-teal-200 hover:bg-gray-600'
-                          : 'bg-teal-50 text-teal-800 hover:bg-teal-100'
-                      }`}
-                    >
-                      <FaHeadphones className="text-lg" />
-                      {listenMode ? 'الخروج من وضع الاستماع' : 'دخول وضع الاستماع'}
-                    </button>
+                    {/* Only render listen mode toggle if not juz 2 */}
+                    {!(readingOption === 'juz' && selectedJuz === 2) && (
+                      <button
+                        onClick={toggleListenMode}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                          listenMode
+                            ? 'bg-teal-600 text-white'
+                            : theme === 'dark'
+                            ? 'bg-gray-700 text-teal-200 hover:bg-gray-600'
+                            : 'bg-teal-50 text-teal-800 hover:bg-teal-100'
+                        }`}
+                      >
+                        <FaHeadphones className="text-lg" />
+                        {listenMode ? 'الخروج من وضع الاستماع' : 'دخول وضع الاستماع'}
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -1049,9 +1033,7 @@ function Quran() {
                               <>
                                 <button
                                   onClick={handlePreviousSurah}
-                                  disabled={
-                                    selectedSurah && selectedSurah.number <= 1
-                                  }
+                                  disabled={selectedSurah && selectedSurah.number <= 1}
                                   className="px-3 py-2 rounded bg-teal-600 hover:bg-teal-700 text-white disabled:opacity-50"
                                 >
                                   <FaBackward />
@@ -1275,7 +1257,6 @@ function Quran() {
                         >
                           {paginatedVerses.length > 0 ? (
                             paginatedVerses.map((verse) => {
-                              // Combine number + numberInSurah for unique key
                               const verseKey = `${verse.number}-${verse.numberInSurah}`;
                               return (
                                 <p key={verseKey} className="mb-4">

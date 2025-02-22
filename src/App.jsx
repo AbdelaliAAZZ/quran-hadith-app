@@ -4,7 +4,8 @@ import Home from './pages/Home';
 import Quran from './pages/Quran';
 import Hadith from './pages/Hadith';
 import Tasbih from './pages/Tasbih';
-import HijriCalendar from './pages/HijriCalendar'; // New calendar page
+import HijriCalendar from './pages/HijriCalendar';
+import Books from './pages/Books';
 import { useTheme } from './context/ThemeContext';
 
 function App() {
@@ -13,7 +14,9 @@ function App() {
   return (
     <div
       className={
-        theme === 'dark' ? 'bg-gray-900 text-white min-h-screen' : 'bg-white text-black min-h-screen'
+        theme === 'dark'
+          ? 'bg-gray-900 text-white min-h-screen'
+          : 'bg-white text-black min-h-screen'
       }
     >
       <Navbar />
@@ -24,6 +27,7 @@ function App() {
           <Route path="/hadith" element={<Hadith />} />
           <Route path="/tasbih" element={<Tasbih />} />
           <Route path="/calendar" element={<HijriCalendar />} />
+          <Route path="/books" element={<Books />} />
         </Routes>
       </main>
       <footer
@@ -31,7 +35,7 @@ function App() {
           theme === 'dark' ? 'bg-gray-900 text-gray-400' : 'bg-gray-100 text-gray-700'
         }`}
       >
-        <p className="text-sm">&copy; 2025 Quran &amp; Hadith App. All rights reserved.</p>
+        <p className="text-sm">© 2025 Quran & Hadith App. All rights reserved.</p>
       </footer>
     </div>
   );

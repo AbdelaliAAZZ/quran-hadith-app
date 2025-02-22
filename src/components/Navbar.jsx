@@ -17,9 +17,9 @@ function Navbar() {
     setTheme(theme === 'dark' ? 'light' : 'dark');
   };
 
-  // EmailJS configuration
   const SERVICE_ID = 'service_1vazxgr';
-  const TEMPLATE_ID = 'template_4erx1vp';
+  const ADMIN_TEMPLATE = 'template_4erx1vp';
+  const USER_REPLY_TEMPLATE = 'template_5mhf49d';
   const PUBLIC_KEY = 'XXRK4kg3nQWZEdb4t';
 
   const formRef = useRef();
@@ -31,16 +31,33 @@ function Navbar() {
       setTimeout(() => setToastMessage(''), 3000);
       return;
     }
-    emailjs
-      .sendForm(SERVICE_ID, TEMPLATE_ID, formRef.current, PUBLIC_KEY)
+
+    // Send report to admin
+    emailjs.sendForm(SERVICE_ID, ADMIN_TEMPLATE, formRef.current, PUBLIC_KEY)
+      .then(() => {
+        // Send auto-reply to user
+        return emailjs.send(
+          SERVICE_ID,
+          USER_REPLY_TEMPLATE,
+          {
+            to_email: reportEmail,
+            user_email: reportEmail,
+            report_content: reportMessage,
+            submission_date: new Date().toLocaleString('ar-EG')
+          },
+          PUBLIC_KEY
+        );
+      })
       .then(() => {
         setToastMessage('تم إرسال التقرير بنجاح');
         setTimeout(() => setToastMessage(''), 3000);
       })
-      .catch(() => {
+      .catch((error) => {
+        console.error('Email error:', error);
         setToastMessage('فشل إرسال التقرير');
         setTimeout(() => setToastMessage(''), 3000);
       });
+
     formRef.current.reset();
     setReportEmail('');
     setReportMessage('');
@@ -49,7 +66,6 @@ function Navbar() {
 
   return (
     <>
-      {/* Custom CSS Animations and Hover Effects */}
       <style>{`
         @keyframes snake {
           0% { width: 0; }
@@ -106,44 +122,30 @@ function Navbar() {
         }
       `}</style>
 
-      <nav
-        className="bg-white dark:bg-gray-800 backdrop-blur-lg bg-opacity-90 shadow-lg sticky top-0 z-50"
-        dir="rtl"
-      >
+      <nav className="bg-white dark:bg-gray-800 backdrop-blur-lg bg-opacity-90 shadow-lg sticky top-0 z-50" dir="rtl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            {/* Logo with Image */}
             <div className="flex-shrink-0 transform hover:scale-105 transition-transform duration-300">
               <Link to="/">
                 <img src={logo} alt="Logo" className="h-10 w-auto" />
               </Link>
             </div>
 
-            {/* Desktop Menu */}
             <div className="hidden md:flex items-center space-x-8">
-              <Link
-                to="/quran"
-                className="nav-link text-teal-700 dark:text-teal-300 px-3 py-2 transition-all duration-300"
-              >
+              <Link to="/quran" className="nav-link text-teal-700 dark:text-teal-300 px-3 py-2 transition-all duration-300">
                 القرآن الكريم
               </Link>
-              <Link
-                to="/hadith"
-                className="nav-link text-teal-700 dark:text-teal-300 px-3 py-2 transition-all duration-300"
-              >
+              <Link to="/hadith" className="nav-link text-teal-700 dark:text-teal-300 px-3 py-2 transition-all duration-300">
                 الحديث الشريف
               </Link>
-              <Link
-                to="/tasbih"
-                className="nav-link text-teal-700 dark:text-teal-300 px-3 py-2 transition-all duration-300"
-              >
+              <Link to="/tasbih" className="nav-link text-teal-700 dark:text-teal-300 px-3 py-2 transition-all duration-300">
                 السبحة
               </Link>
-              <Link
-                to="/calendar"
-                className="nav-link text-teal-700 dark:text-teal-300 px-3 py-2 transition-all duration-300"
-              >
+              <Link to="/calendar" className="nav-link text-teal-700 dark:text-teal-300 px-3 py-2 transition-all duration-300">
                 التقويم
+              </Link>
+              <Link to="/books" className="nav-link text-teal-700 dark:text-teal-300 px-3 py-2 transition-all duration-300">
+                الكتب
               </Link>
               <button
                 onClick={() => setShowReportIssue(true)}
@@ -160,7 +162,6 @@ function Navbar() {
               </button>
             </div>
 
-            {/* Mobile Menu Button */}
             <div className="flex md:hidden items-center space-x-2">
               <button
                 onClick={toggleTheme}
@@ -172,27 +173,11 @@ function Navbar() {
                 onClick={() => setIsOpen((prev) => !prev)}
                 className="inline-flex items-center justify-center p-2 rounded-md text-teal-700 dark:text-teal-300 transition-transform duration-300 transform hover:scale-110"
               >
-                <svg
-                  className="h-6 w-6"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
+                <svg className="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   {isOpen ? (
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   ) : (
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4 6h16M4 12h16M4 18h16"
-                    />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                   )}
                 </svg>
               </button>
@@ -200,33 +185,23 @@ function Navbar() {
           </div>
         </div>
 
-        {/* Mobile Menu */}
         {isOpen && (
           <div className="md:hidden bg-white dark:bg-gray-800 backdrop-blur-lg bg-opacity-95 animate-slide-down">
             <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-              <Link
-                to="/quran"
-                className="block nav-link text-teal-700 dark:text-teal-300 hover:text-teal-900 dark:hover:text-teal-100 hover:bg-teal-50 dark:hover:bg-gray-700 px-3 py-2 rounded-md text-base font-medium text-right"
-              >
+              <Link to="/quran" className="block nav-link text-teal-700 dark:text-teal-300 hover:text-teal-900 dark:hover:text-teal-100 hover:bg-teal-50 dark:hover:bg-gray-700 px-3 py-2 rounded-md text-base font-medium text-right">
                 القرآن الكريم
               </Link>
-              <Link
-                to="/hadith"
-                className="block nav-link text-teal-700 dark:text-teal-300 hover:text-teal-900 dark:hover:text-teal-100 hover:bg-teal-50 dark:hover:bg-gray-700 px-3 py-2 rounded-md text-base font-medium text-right"
-              >
+              <Link to="/hadith" className="block nav-link text-teal-700 dark:text-teal-300 hover:text-teal-900 dark:hover:text-teal-100 hover:bg-teal-50 dark:hover:bg-gray-700 px-3 py-2 rounded-md text-base font-medium text-right">
                 الحديث الشريف
               </Link>
-              <Link
-                to="/tasbih"
-                className="block nav-link text-teal-700 dark:text-teal-300 hover:text-teal-900 dark:hover:text-teal-100 hover:bg-teal-50 dark:hover:bg-gray-700 px-3 py-2 rounded-md text-base font-medium text-right"
-              >
+              <Link to="/tasbih" className="block nav-link text-teal-700 dark:text-teal-300 hover:text-teal-900 dark:hover:text-teal-100 hover:bg-teal-50 dark:hover:bg-gray-700 px-3 py-2 rounded-md text-base font-medium text-right">
                 السبحة
               </Link>
-              <Link
-                to="/calendar"
-                className="block nav-link text-teal-700 dark:text-teal-300 hover:text-teal-900 dark:hover:text-teal-100 hover:bg-teal-50 dark:hover:bg-gray-700 px-3 py-2 rounded-md text-base font-medium text-right"
-              >
+              <Link to="/calendar" className="block nav-link text-teal-700 dark:text-teal-300 hover:text-teal-900 dark:hover:text-teal-100 hover:bg-teal-50 dark:hover:bg-gray-700 px-3 py-2 rounded-md text-base font-medium text-right">
                 التقويم
+              </Link>
+              <Link to="/books" className="block nav-link text-teal-700 dark:text-teal-300 hover:text-teal-900 dark:hover:text-teal-100 hover:bg-teal-50 dark:hover:bg-gray-700 px-3 py-2 rounded-md text-base font-medium text-right">
+                الكتب
               </Link>
               <button
                 onClick={() => setShowReportIssue(true)}
@@ -240,7 +215,6 @@ function Navbar() {
         )}
       </nav>
 
-      {/* Report Issue Modal */}
       {showReportIssue && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-sm w-full animate-pop-in">
@@ -296,7 +270,6 @@ function Navbar() {
         </div>
       )}
 
-      {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-4 left-4 bg-teal-600 text-white py-2 px-4 rounded shadow-lg animate-slide-up">
           {toastMessage}

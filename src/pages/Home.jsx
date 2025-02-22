@@ -1,3 +1,4 @@
+// Home.jsx
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
@@ -5,44 +6,52 @@ import adkarData from '../data/adkar.json';
 
 function Home() {
   const { theme } = useTheme();
-  const [adkar, setAdkar] = useState(null);
+  const [currentAdkar, setCurrentAdkar] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [timeOfDay, setTimeOfDay] = useState('');
+  const [timeCategory, setTimeCategory] = useState('');
+  const [adkarIndex, setAdkarIndex] = useState(0);
 
-  // Ramadan date check (adjust dates according to the current year)
+  // Ramadan date check
   const isRamadan =
     new Date() >= new Date('2024-03-10') && new Date() <= new Date('2024-04-09');
 
-  // Determine time of day based on current hour
-  const getTimeOfDay = () => {
+  // Enhanced time categories mapping
+  const getTimeCategory = () => {
     const hour = new Date().getHours();
-    if (hour >= 5 && hour < 12) return 'morning';
+    if (hour >= 4 && hour < 12) return 'morning';
     if (hour >= 12 && hour < 18) return 'afternoon';
-    return 'evening';
+    if (hour >= 18 && hour < 22) return 'evening';
+    return 'night';
   };
 
-  // Load a random Adkar based on the current time category
-  const loadRandomAdkar = () => {
+  // Get relevant categories based on time
+  const getRelevantCategories = (time) => {
+    const categoryMap = {
+      morning: ['أذكار الصباح', 'تسابيح', 'أدعية قرآنية'],
+      afternoon: ['أدعية قرآنية', 'تسابيح', 'أدعية الأنبياء'],
+      evening: ['أذكار المساء', 'تسابيح', 'أدعية قرآنية'],
+      night: ['أذكار النوم', 'تسابيح', 'أدعية قرآنية', 'أدعية الأنبياء']
+    };
+    return categoryMap[time] || [];
+  };
+
+  // Load relevant Adkar based on time
+  const loadAdkar = () => {
     try {
-      const time = getTimeOfDay();
-      setTimeOfDay(time);
-
-      const categoryMap = {
-        morning: 'أذكار الصباح',
-        afternoon: 'أدعية قرآنية',
-        evening: 'أذكار المساء',
-      };
-
-      const categoryName = categoryMap[time];
-      const filteredAdkar = adkarData[categoryName] || [];
+      const time = getTimeCategory();
+      setTimeCategory(time);
+      const categories = getRelevantCategories(time);
+      
+      const filteredAdkar = categories.reduce((acc, category) => {
+        const categoryData = adkarData[category] || [];
+        return [...acc, ...categoryData];
+      }, []);
 
       if (filteredAdkar.length > 0) {
-        const randomAdkar =
-          filteredAdkar[Math.floor(Math.random() * filteredAdkar.length)];
-        setAdkar(randomAdkar);
+        setCurrentAdkar(filteredAdkar[adkarIndex % filteredAdkar.length]);
       } else {
-        setAdkar(null);
+        setCurrentAdkar(null);
       }
       setError('');
     } catch (error) {
@@ -53,21 +62,23 @@ function Home() {
     }
   };
 
+  const handleNextAdkar = () => {
+    setAdkarIndex(prev => prev + 1);
+    loadAdkar();
+  };
+
   useEffect(() => {
-    loadRandomAdkar();
+    loadAdkar();
   }, []);
 
-  const getTimeOfDayText = () => {
-    switch (timeOfDay) {
-      case 'morning':
-        return 'أذكار الصباح';
-      case 'afternoon':
-        return 'أدعية قرآنية';
-      case 'evening':
-        return 'أذكار المساء';
-      default:
-        return 'الأذكار';
-    }
+  const getCategoryTitle = () => {
+    const titles = {
+      morning: 'أذكار الصباح 🌄',
+      afternoon: 'أدعية العصر 🌤',
+      evening: 'أذكار المساء 🌙',
+      night: 'أذكار النوم 🌌'
+    };
+    return titles[timeCategory] || 'الأذكار اليومية';
   };
 
   return (
@@ -107,7 +118,7 @@ function Home() {
           style={{ backgroundImage: 'url(islamic-pattern.svg)' }}
         />
 
-        {/* Ramadan Icons (Hilal and Fanous) */}
+        {/* Ramadan Icons */}
         {isRamadan && (
           <>
             <div className="absolute top-4 right-4 text-3xl animate-twinkle delay-100">
@@ -149,9 +160,7 @@ function Home() {
               theme === 'dark' ? 'text-teal-300' : 'text-teal-700'
             } mb-4 sm:mb-6 font-amiri text-center flex items-center justify-center`}
           >
-            <span className="mr-2">🌙</span>
-            {getTimeOfDayText()}
-            <span className="ml-2">⭐</span>
+            {getCategoryTitle()}
           </h2>
 
           {loading ? (
@@ -172,50 +181,51 @@ function Home() {
             >
               {error}
             </div>
-          ) : adkar ? (
+          ) : currentAdkar ? (
             <div className="space-y-4 sm:space-y-6">
               <div
-                className={`${theme === 'dark' ? 'bg-gray-700/50' : 'bg-teal-50/90'} 
-                rounded-xl sm:rounded-2xl p-4 sm:p-6 border-2 ${
+                className={`${
+                  theme === 'dark' ? 'bg-gray-700/50' : 'bg-teal-50/90'
+                } rounded-xl sm:rounded-2xl p-4 sm:p-6 border-2 ${
                   theme === 'dark' ? 'border-teal-600/50' : 'border-teal-200'
                 } shadow-lg transition-all hover:shadow-xl`}
               >
                 <p className="text-right text-xl sm:text-2xl leading-loose text-gray-800 dark:text-gray-200 font-arabic mb-4 sm:mb-6 select-none">
-                  {adkar.content}
+                  {currentAdkar.content}
                 </p>
                 <div className="space-y-2 sm:space-y-4">
-                  {adkar.description && (
+                  {currentAdkar.description && (
                     <p
                       className={`text-base italic ${
                         theme === 'dark' ? 'text-teal-200' : 'text-teal-700'
                       }`}
                     >
-                      {adkar.description}
+                      {currentAdkar.description}
                     </p>
                   )}
-                  {adkar.reference && (
+                  {currentAdkar.reference && (
                     <div
                       className={`text-xs sm:text-sm ${
                         theme === 'dark' ? 'text-teal-400' : 'text-teal-600'
                       } bg-opacity-20 p-2 sm:p-3 rounded-lg`}
                     >
-                      📖 المرجع: {adkar.reference}
+                      📖 المرجع: {currentAdkar.reference}
                     </div>
                   )}
-                  {adkar.count && (
+                  {currentAdkar.count && (
                     <div
                       className={`text-base ${
                         theme === 'dark' ? 'text-teal-400' : 'text-teal-700'
                       } flex items-center`}
                     >
                       <span className="mr-2">🕋</span>
-                      التكرار: {adkar.count} مرات
+                      التكرار: {currentAdkar.count} مرات
                     </div>
                   )}
                 </div>
               </div>
               <button
-                onClick={loadRandomAdkar}
+                onClick={handleNextAdkar}
                 className={`w-full py-2 sm:py-3 rounded-xl font-semibold transition-all ${
                   theme === 'dark'
                     ? 'bg-teal-700 hover:bg-teal-600 text-white'
@@ -238,14 +248,15 @@ function Home() {
           )}
         </div>
 
-        {/* Features Section with Clickable Links */}
+        {/* Features Section */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-8 mt-8 sm:mt-12">
-          <Link to={`/quran`}>
+          <Link to="/quran" className="group">
             <div
-              className={`${theme === 'dark' ? 'bg-gray-700/40' : 'bg-teal-50/90'} 
-              p-4 sm:p-6 rounded-xl sm:rounded-2xl border-2 ${
+              className={`${
+                theme === 'dark' ? 'bg-gray-700/40' : 'bg-teal-50/90'
+              } p-4 sm:p-6 rounded-xl sm:rounded-2xl border-2 ${
                 theme === 'dark' ? 'border-teal-600/30' : 'border-teal-200'
-              } transition-all hover:scale-[1.02]`}
+              } transition-all group-hover:scale-[1.02] cursor-pointer`}
             >
               <h2
                 className={`text-xl sm:text-2xl font-semibold ${
@@ -260,18 +271,18 @@ function Home() {
                   theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
                 } leading-relaxed`}
               >
-                اقرأ واستمع إلى القرآن الكريم مع العديد من القراء والتفاسير المتاحة.{' '}
-                {isRamadan && 'تصفح خطة القراءة الرمضانية.'}
+                اقرأ واستمع إلى القرآن الكريم مع العديد من القراء والتفاسير المتاحة.
               </p>
             </div>
           </Link>
 
-          <Link to={`/hadith`}>
+          <Link to="/hadith" className="group">
             <div
-              className={`${theme === 'dark' ? 'bg-gray-700/40' : 'bg-teal-50/90'} 
-              p-4 sm:p-6 rounded-xl sm:rounded-2xl border-2 ${
+              className={`${
+                theme === 'dark' ? 'bg-gray-700/40' : 'bg-teal-50/90'
+              } p-4 sm:p-6 rounded-xl sm:rounded-2xl border-2 ${
                 theme === 'dark' ? 'border-teal-600/30' : 'border-teal-200'
-              } transition-all hover:scale-[1.02]`}
+              } transition-all group-hover:scale-[1.02] cursor-pointer`}
             >
               <h2
                 className={`text-xl sm:text-2xl font-semibold ${
@@ -286,8 +297,7 @@ function Home() {
                   theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
                 } leading-relaxed`}
               >
-                اكتشف الأحاديث الصحيحة مع مصادرها وشرحها.{' '}
-                {isRamadan && 'مجموعة خاصة من أحاديث الصيام.'}
+                اكتشف الأحاديث الصحيحة مع مصادرها وشرحها.
               </p>
             </div>
           </Link>
@@ -313,7 +323,9 @@ function Home() {
           box-shadow: ${isRamadan ? '0 0 20px rgba(76, 175, 80, 0.3)' : 'none'};
         }
         .ramadan-title {
-          text-shadow: ${isRamadan && theme === 'dark' ? '0 0 8px rgba(255, 215, 0, 0.5)' : 'none'};
+          text-shadow: ${
+            isRamadan && theme === 'dark' ? '0 0 8px rgba(255, 215, 0, 0.5)' : 'none'
+          };
         }
       `}</style>
     </div>
