@@ -1,4 +1,4 @@
-// Books.jsx
+
 import { useState, useEffect } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { FaEye, FaDownload, FaSearch, FaFilter } from 'react-icons/fa';
@@ -13,8 +13,8 @@ import quran2Image from '../assets/quran2image.png';
 const books = [
   { 
     id: '1', 
-    title: 'تفسير ابن كثير', 
-    author: 'ابن كثير', 
+    title: ' القرآن الكريم ', 
+    author: ' ', 
     pdfPath: ibnKathirPdf, 
     coverImage: quranImage,
     category: 'التفسير',
@@ -24,8 +24,8 @@ const books = [
   },
   { 
     id: '2', 
-    title: 'تفسير الجلالين', 
-    author: 'الجلالين', 
+    title: 'المصحف الشريف برواية البزي عن اين كثير', 
+    author: '', 
     pdfPath: alJalalaynPdf, 
     coverImage: quran2Image,
     category: 'التفسير',

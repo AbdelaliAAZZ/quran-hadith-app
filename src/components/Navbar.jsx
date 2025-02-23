@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import emailjs from 'emailjs-com';
 import { useTheme } from '../context/ThemeContext';
 import { FaExclamationTriangle, FaMoon, FaSun } from 'react-icons/fa';
-import logo from '../assets/praying.png';
+import logo from '../assets/muslim.png';
 
 function Navbar() {
   const [isOpen, setIsOpen] = useState(false);

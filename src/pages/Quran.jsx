@@ -25,20 +25,16 @@ import {
   FaFacebook,
   FaTwitter,
   FaWhatsapp,
+  FaSyncAlt
 } from 'react-icons/fa';
 
-// ------------------ Updated PDF Viewer Imports ------------------
-import { Viewer, Worker } from '@react-pdf-viewer/core';
-import { defaultLayoutPlugin } from '@react-pdf-viewer/default-layout';
-import '@react-pdf-viewer/core/lib/styles/index.css';
-import '@react-pdf-viewer/default-layout/lib/styles/index.css';
-
-const pdfjsWorkerUrl = `https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js`;
+import PdfViewer from './PdfViewer';
+// Import asset icons and the pdf file
+import madinaIcon from '../assets/madina-img.ico';
+import makkahIcon from '../assets/makkah-img.ico';
+import book1Pdf from '../assets/book1.pdf';
 
 function Quran() {
-  // Initialize the default layout plugin inside the component
-  const defaultLayoutPluginInstance = defaultLayoutPlugin();
-
   // ------------------ STATE ------------------
   const [surahs, setSurahs] = useState([]);
   const [selectedSurah, setSelectedSurah] = useState(null);
@@ -71,9 +67,12 @@ function Quran() {
   const [elapsedTime, setElapsedTime] = useState(0);
   const [remainingTime, setRemainingTime] = useState(0);
 
-  // Speed control
+  // Speed control – now integrated directly in listen mode
   const [playbackRate, setPlaybackRate] = useState(1);
-  const [showSpeedMenu, setShowSpeedMenu] = useState(false);
+  // Volume control state (0 to 1)
+  const [volume, setVolume] = useState(1);
+  // Repeat mode: when true, the current verse is repeated on end
+  const [repeatMode, setRepeatMode] = useState(false);
 
   // Reading Option: only 'surah' or 'juz'
   const [readingOption, setReadingOption] = useState('surah');
@@ -116,11 +115,7 @@ function Quran() {
   ];
 
   // Additional reading fonts
-  const readingFonts = [
-    'Amiri',
-    'Reem Kufi',
-    'Lateef',
-  ];
+  const readingFonts = ['Amiri', 'Reem Kufi', 'Lateef'];
 
   // ------------------ LOAD BOOKMARKS FROM LOCALSTORAGE ------------------
   useEffect(() => {
@@ -243,13 +238,6 @@ function Quran() {
     }
   }, [readingOption, selectedJuz]);
 
-  // ------------------ Disable Listen Mode for Juz 2 ------------------
-  useEffect(() => {
-    if (readingOption === 'juz' && selectedJuz === 2) {
-      setListenMode(false);
-    }
-  }, [readingOption, selectedJuz]);
-
   // ------------------ AUTO-PLAY LOGIC ------------------
   useEffect(() => {
     if (listenMode && selectedSurah && autoPlayRef.current && verses.length > 0) {
@@ -271,6 +259,7 @@ function Quran() {
     const audioEl = audioAllRef.current;
     if (!audioEl) return;
     audioEl.playbackRate = playbackRate;
+    audioEl.volume = volume;
 
     const handleTimeUpdate = () => {
       if (audioEl.duration) {
@@ -282,6 +271,12 @@ function Quran() {
     };
 
     const handleEnded = () => {
+      if (repeatMode) {
+        // Repeat the current verse
+        audioEl.currentTime = 0;
+        audioEl.play();
+        return;
+      }
       if (currentPlayingIndex < verses.length - 1 && isPlayingAll) {
         const nextIndex = currentPlayingIndex + 1;
         setCurrentPlayingIndex(nextIndex);
@@ -303,7 +298,14 @@ function Quran() {
       audioEl.removeEventListener('timeupdate', handleTimeUpdate);
       audioEl.removeEventListener('ended', handleEnded);
     };
-  }, [currentPlayingIndex, verses, isPlayingAll, playbackRate]);
+  }, [currentPlayingIndex, verses, isPlayingAll, playbackRate, volume, repeatMode]);
+
+  // Update audio volume when volume state changes
+  useEffect(() => {
+    if (audioAllRef.current) {
+      audioAllRef.current.volume = volume;
+    }
+  }, [volume]);
 
   // ------------------ MODE TOGGLES ------------------
   const toggleReadingMode = () => {
@@ -313,9 +315,12 @@ function Quran() {
   };
 
   const toggleListenMode = () => {
-    // Do not allow listen mode when juz 2 is selected
+    // Prevent accessing listen mode when juz 2 is selected
     if (readingOption === 'juz' && selectedJuz === 2) {
-      setListenMode(false);
+      alert("وضع الاستماع غير متاح للجزء 2. سيتم نقلك إلى موقعك الحالي.");
+      if (mainContentRef.current) {
+        mainContentRef.current.scrollIntoView({ behavior: 'smooth' });
+      }
       return;
     }
     setListenMode((prev) => !prev);
@@ -540,37 +545,9 @@ function Quran() {
     }
   };
 
-  // ------------------ PDF READER VIEW (Updated) ------------------
+  // ------------------ PDF READER VIEW ------------------
   if (showAllQuran) {
-    return (
-      <div className="min-h-screen flex flex-col">
-        <div className="p-4 bg-gray-200 dark:bg-gray-700">
-          <button
-            onClick={() => setShowAllQuran(false)}
-            className="text-teal-600 dark:text-teal-200"
-          >
-            العودة إلى القرآن
-          </button>
-        </div>
-        <div className="flex-1 flex flex-col items-center justify-center p-4 overflow-auto">
-          <Worker workerUrl={pdfjsWorkerUrl}>
-            <Viewer
-              fileUrl="/book1.pdf"
-              plugins={[defaultLayoutPluginInstance]}
-              localization={{
-                scrollMode: {
-                  horizontalScrolling: 'التمرير الأفقي',
-                  verticalScrolling: 'التمرير الرأسي',
-                },
-                search: {
-                  searchPlaceholder: 'ابحث في النص...',
-                }
-              }}
-            />
-          </Worker>
-        </div>
-      </div>
-    );
+    return <PdfViewer file={book1Pdf} onClose={() => setShowAllQuran(false)} />;
   }
 
   // ------------------ MAIN RENDER ------------------
@@ -865,9 +842,15 @@ function Quran() {
                           }`}
                         >
                           عدد الآيات: {selectedSurah.numberOfAyahs} |{' '}
-                          {selectedSurah.revelationType === 'Meccan'
-                            ? 'مكية'
-                            : 'مدنية'}
+                          {selectedSurah.revelationType === 'Meccan' ? (
+                            <>
+                              <img src={makkahIcon} alt="مكية" className="w-6 h-6 inline-block mx-1" /> مكية
+                            </>
+                          ) : (
+                            <>
+                              <img src={madinaIcon} alt="مدنية" className="w-6 h-6 inline-block mx-1" /> مدنية
+                            </>
+                          )}
                         </p>
                       </>
                     )
@@ -903,7 +886,7 @@ function Quran() {
                       <FaBook className="text-lg" />
                       {readingMode ? 'الخروج من وضع القراءة' : 'دخول وضع القراءة'}
                     </button>
-                    {/* Only render listen mode toggle if not juz 2 */}
+                    {/* Do not render listen mode toggle if juz 2 is selected */}
                     {!(readingOption === 'juz' && selectedJuz === 2) && (
                       <button
                         onClick={toggleListenMode}
@@ -933,12 +916,11 @@ function Quran() {
                         ? selectedSurah && selectedSurah.name
                         : `الجزء ${selectedJuz}`}
                     </h2>
-
+                    {/* Listen Mode Controls with Icons */}
                     <div className="mb-4 flex flex-col sm:flex-row justify-center items-center gap-4">
                       <div className="flex items-center gap-2">
-                        <label className="text-sm text-gray-700 dark:text-gray-300">
-                          القارئ:
-                        </label>
+                        <FaHeadphones className="text-xl text-teal-600" />
+                        <label className="text-sm text-gray-700 dark:text-gray-300">القارئ:</label>
                         <select
                           value={reciter}
                           onChange={(e) => setReciter(e.target.value)}
@@ -951,71 +933,44 @@ function Quran() {
                           ))}
                         </select>
                       </div>
-
                       <div className="flex items-center gap-2">
+                        <FaTachometerAlt className="text-xl text-teal-600" />
+                        <label className="text-sm text-gray-700 dark:text-gray-300">سرعة الصوت:</label>
+                        <input
+                          type="range"
+                          min="0.25"
+                          max="2"
+                          step="0.25"
+                          value={playbackRate}
+                          onChange={(e) => setPlaybackRate(parseFloat(e.target.value))}
+                          className="accent-teal-400"
+                        />
+                        <span className="text-sm">{playbackRate}x</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <FaVolumeUp className="text-xl text-teal-600" />
+                        <label className="text-sm text-gray-700 dark:text-gray-300">مستوى الصوت:</label>
+                        <input
+                          type="range"
+                          min="0"
+                          max="1"
+                          step="0.05"
+                          value={volume}
+                          onChange={(e) => setVolume(parseFloat(e.target.value))}
+                          className="accent-teal-400"
+                        />
+                        <span className="text-sm">{Math.round(volume * 100)}%</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <FaSyncAlt className="text-xl text-teal-600" />
                         <button
-                          onClick={() => setShowSpeedMenu((prev) => !prev)}
-                          className="px-3 py-2 rounded bg-teal-600 hover:bg-teal-700 text-white flex items-center gap-1"
-                          title="تحكم السرعة"
+                          onClick={() => setRepeatMode((prev) => !prev)}
+                          className={`px-3 py-2 rounded ${
+                            repeatMode ? 'bg-red-600 text-white' : 'bg-gray-300 text-gray-700'
+                          }`}
                         >
-                          <FaTachometerAlt />
-                          السرعة
+                          {repeatMode ? 'تكرار: مفعل' : 'تكرار'}
                         </button>
-                        {showSpeedMenu && (
-                          <div
-                            className={`absolute top-[8rem] sm:top-[4.5rem] sm:right-[30%] md:right-[35%] lg:right-[40%]
-                              bg-gray-700 text-white p-4 rounded shadow-md z-50 w-64`}
-                          >
-                            <h3 className="font-bold mb-2">Preset Speeds:</h3>
-                            <div className="flex gap-2 flex-wrap mb-3">
-                              {[0.25, 0.5, 1, 1.5, 2].map((spd) => (
-                                <button
-                                  key={`spd-${spd}`}
-                                  onClick={() => setPlaybackRate(spd)}
-                                  className={`px-3 py-1 rounded ${
-                                    playbackRate === spd
-                                      ? 'bg-red-600'
-                                      : 'bg-gray-600 hover:bg-gray-500'
-                                  }`}
-                                >
-                                  {spd}x
-                                </button>
-                              ))}
-                            </div>
-                            <h3 className="font-bold mb-1">
-                              السرعة المخصصة: {playbackRate}x
-                            </h3>
-                            <div className="flex items-center gap-2 mb-2">
-                              <button
-                                onClick={() =>
-                                  setPlaybackRate((prev) => Math.max(prev - 0.25, 0.25))
-                                }
-                                className="bg-gray-600 hover:bg-gray-500 px-2 py-1 rounded"
-                              >
-                                <FaMinus />
-                              </button>
-                              <button
-                                onClick={() =>
-                                  setPlaybackRate((prev) => Math.min(prev + 0.25, 2))
-                                }
-                                className="bg-gray-600 hover:bg-gray-500 px-2 py-1 rounded"
-                              >
-                                <FaPlus />
-                              </button>
-                            </div>
-                            <input
-                              type="range"
-                              min="0.25"
-                              max="2"
-                              step="0.25"
-                              value={playbackRate}
-                              onChange={(e) =>
-                                setPlaybackRate(parseFloat(e.target.value))
-                              }
-                              className="w-full accent-teal-400"
-                            />
-                          </div>
-                        )}
                       </div>
                     </div>
 
@@ -1078,8 +1033,7 @@ function Quran() {
 
                           <div className="flex-1 flex flex-col md:flex-row items-center gap-2">
                             <span>
-                              الوقت المنقضي: {elapsedTime} دقيقة | المتبقي:{' '}
-                              {remainingTime} دقيقة
+                              الوقت المنقضي: {elapsedTime} دقيقة | المتبقي: {remainingTime} دقيقة
                             </span>
                             <input
                               type="range"
