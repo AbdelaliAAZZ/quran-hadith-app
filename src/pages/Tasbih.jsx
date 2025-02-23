@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import PropTypes from 'prop-types';
 import { GiPrayerBeads } from 'react-icons/gi';
 import { FaCheckCircle } from 'react-icons/fa';
 
@@ -25,6 +27,34 @@ const defaultDhikrList = [
     icon: <GiPrayerBeads className="w-8 h-8 text-teal-500" />,
   },
 ];
+
+// AnimatedNumber component that animates the number change and shows a blinking cursor.
+const AnimatedNumber = ({ number }) => (
+  <span className="inline-flex items-center">
+    <AnimatePresence exitBeforeEnter>
+      <motion.span
+        key={number}
+        initial={{ y: -10, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 10, opacity: 0 }}
+        transition={{ duration: 0.3 }}
+      >
+        {number}
+      </motion.span>
+    </AnimatePresence>
+    <motion.span
+      className="ml-1"
+      animate={{ opacity: [0, 1, 0] }}
+      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+    >
+      |
+    </motion.span>
+  </span>
+);
+
+AnimatedNumber.propTypes = {
+  number: PropTypes.number.isRequired,
+};
 
 function Tasbih() {
   const [dhikrList, setDhikrList] = useState(defaultDhikrList);
@@ -99,7 +129,7 @@ function Tasbih() {
     );
   };
 
-  // Change target count for a counter
+  // Change target count for a counter with animation on focus
   const handleTargetChange = (id, newTarget) => {
     setDhikrList((prevList) =>
       prevList.map((dhikr) =>
@@ -146,13 +176,14 @@ function Tasbih() {
                 </div>
                 <div className="flex items-center space-x-2">
                   <label className="text-sm text-gray-700 dark:text-gray-300">الهدف:</label>
-                  <input
+                  <motion.input
                     type="number"
                     className="w-20 p-1 border rounded bg-white dark:bg-gray-700 dark:text-gray-200 text-center"
                     value={dhikr.target}
                     onChange={(e) =>
                       handleTargetChange(dhikr.id, parseInt(e.target.value) || 0)
                     }
+                    whileFocus={{ scale: 1.05 }}
                   />
                 </div>
               </div>
@@ -166,7 +197,7 @@ function Tasbih() {
 
               <div className="flex flex-col sm:flex-row justify-between items-center">
                 <p className="text-lg text-gray-800 dark:text-gray-200 mb-3 sm:mb-0">
-                  العداد: {dhikr.count} / {dhikr.target}
+                  العداد: <AnimatedNumber number={dhikr.count} /> / {dhikr.target}
                 </p>
                 <div className="flex gap-3">
                   <button

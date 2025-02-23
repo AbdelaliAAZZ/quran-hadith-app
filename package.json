@@ -14,6 +14,7 @@
     "@react-pdf-viewer/default-layout": "^3.12.0",
     "cors": "^2.8.5",
     "emailjs-com": "^3.2.0",
+    "framer-motion": "^12.4.7",
     "origin": "^0.8.6",
     "pdfjs-dist": "^3.11.174",
     "prop-types": "^15.8.1",
