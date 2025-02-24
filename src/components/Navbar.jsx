@@ -163,6 +163,9 @@ function Navbar() {
               <Link to="/calendar" className="nav-link text-teal-700 dark:text-teal-300 px-3 py-2 transition-all duration-300">
                 التقويم
               </Link>
+              <Link to="/adkar" className="nav-link text-teal-700 dark:text-teal-300 px-3 py-2 transition-all duration-300">
+  الأذكار
+</Link>
               <Link to="/books" className="nav-link text-teal-700 dark:text-teal-300 px-3 py-2 transition-all duration-300">
                 الكتب
               </Link>
@@ -226,6 +229,10 @@ function Navbar() {
                 <FaCalendarAlt className="mr-3 text-teal-700" />
                 <span className="text-lg text-teal-700">التقويم</span>
               </Link>
+              <Link to="/adkar" onClick={() => setIsOpen(false)} className="flex items-center px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+  <GiPrayerBeads className="mr-3 text-teal-700 w-6 h-6" />
+  <span className="text-lg text-teal-700">الأذكار</span>
+</Link>
               <Link to="/books" onClick={() => setIsOpen(false)} className="flex items-center px-4 py-3 border-b border-gray-200 dark:border-gray-700">
                 <FaBookOpen className="mr-3 text-teal-700" />
                 <span className="text-lg text-teal-700">الكتب</span>

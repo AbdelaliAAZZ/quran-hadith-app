@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import PropTypes from 'prop-types';
 import { GiPrayerBeads } from 'react-icons/gi';
-import { FaCheckCircle } from 'react-icons/fa';
+import { FaCheckCircle, FaArrowLeft, FaArrowRight } from 'react-icons/fa';
+import { MdOutlineRestartAlt, MdUndo } from 'react-icons/md';
 
 const defaultDhikrList = [
   {
@@ -10,48 +11,83 @@ const defaultDhikrList = [
     label: 'لا إله إلا الله',
     count: 0,
     target: 100,
-    icon: <GiPrayerBeads className="w-20 h-20 text-teal-500" />,
+    icon: <GiPrayerBeads className="w-20 h-20 text-gray-600 dark:text-gray-300" />,
   },
   {
     id: 2,
     label: 'سبحان الله',
     count: 0,
     target: 33,
-    icon: <GiPrayerBeads className="w-20 h-20 text-teal-500" />,
+    icon: <GiPrayerBeads className="w-20 h-20 text-gray-600 dark:text-gray-300" />,
   },
   {
     id: 3,
     label: 'الحمد لله',
     count: 0,
     target: 33,
-    icon: <GiPrayerBeads className="w-20 h-20 text-teal-500" />,
+    icon: <GiPrayerBeads className="w-20 h-20 text-gray-600 dark:text-gray-300" />,
   },
   {
     id: 4,
     label: 'الله أكبر',
     count: 0,
     target: 33,
-    icon: <GiPrayerBeads className="w-20 h-20 text-teal-500" />,
+    icon: <GiPrayerBeads className="w-20 h-20 text-gray-600 dark:text-gray-300" />,
   },
   {
     id: 5,
     label: 'لا حول ولا قوة إلا بالله',
     count: 0,
     target: 33,
-    icon: <GiPrayerBeads className="w-20 h-20 text-teal-500" />,
+    icon: <GiPrayerBeads className="w-20 h-20 text-gray-600 dark:text-gray-300" />,
+  },
+  {
+    id: 6,
+    label: 'أستغفر الله',
+    count: 0,
+    target: 100,
+    icon: <GiPrayerBeads className="w-20 h-20 text-gray-600 dark:text-gray-300" />,
+  },
+  {
+    id: 7,
+    label: 'سبحان الله العظيم',
+    count: 0,
+    target: 33,
+    icon: <GiPrayerBeads className="w-20 h-20 text-gray-600 dark:text-gray-300" />,
+  },
+  {
+    id: 8,
+    label: 'الحمد لله رب العالمين',
+    count: 0,
+    target: 33,
+    icon: <GiPrayerBeads className="w-20 h-20 text-gray-600 dark:text-gray-300" />,
+  },
+  {
+    id: 9,
+    label: 'لا إله إلا أنت سبحانك إني كنت من الظالمين',
+    count: 0,
+    target: 100,
+    icon: <GiPrayerBeads className="w-20 h-20 text-gray-600 dark:text-gray-300" />,
+  },
+  {
+    id: 10,
+    label: 'سبحان الله وبحمده',
+    count: 0,
+    target: 100,
+    icon: <GiPrayerBeads className="w-20 h-20 text-gray-600 dark:text-gray-300" />,
   },
 ];
 
-// AnimatedNumber for smooth transitions
 const AnimatedNumber = ({ number }) => (
   <span className="inline-flex items-center">
-    <AnimatePresence exitBeforeEnter>
+    <AnimatePresence mode='wait'>
       <motion.span
         key={number}
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 20, opacity: 0 }}
         transition={{ duration: 0.3 }}
+        className="font-arabic"
       >
         {number}
       </motion.span>
@@ -68,7 +104,6 @@ function Tasbih() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [notification, setNotification] = useState(null);
 
-  // Load saved data from localStorage on mount
   useEffect(() => {
     const saved = localStorage.getItem('tasbihData');
     if (saved) {
@@ -81,13 +116,11 @@ function Tasbih() {
     }
   }, []);
 
-  // Save updates to localStorage
   useEffect(() => {
     const toStore = dhikrList.map(({ id, count, target }) => ({ id, count, target }));
     localStorage.setItem('tasbihData', JSON.stringify(toStore));
   }, [dhikrList]);
 
-  // Clear notifications after 3 seconds
   useEffect(() => {
     if (notification) {
       const timer = setTimeout(() => setNotification(null), 3000);
@@ -103,7 +136,7 @@ function Tasbih() {
         if (dhikr.id === id) {
           const newCount = dhikr.count + 1;
           if (dhikr.target > 0 && newCount === dhikr.target) {
-            setNotification({ message: `لقد وصلت إلى العدد المطلوب (${dhikr.target}) لـ: ${dhikr.label}` });
+            setNotification({ message: `🎉 لقد وصلت إلى الهدف (${dhikr.target}) لـ: ${dhikr.label}` });
           }
           return { ...dhikr, count: newCount };
         }
@@ -131,12 +164,16 @@ function Tasbih() {
 
   const handleTargetChange = (id, newTarget) => {
     setDhikrList(prevList =>
-      prevList.map(dhikr => (dhikr.id === id ? { ...dhikr, target: newTarget } : dhikr))
+      prevList.map(dhikr => (dhikr.id === id ? { 
+        ...dhikr, 
+        target: Math.max(0, newTarget) 
+      } : dhikr))
     );
   };
 
   const resetAll = () => {
     setDhikrList(prevList => prevList.map(dhikr => ({ ...dhikr, count: 0 })));
+    setNotification({ message: "تم تصفير جميع العدادات" });
   };
 
   const handlePrevious = () => {
@@ -147,86 +184,152 @@ function Tasbih() {
     setCurrentIndex(prev => (prev + 1) % dhikrList.length);
   };
 
+  const progressPercentage = Math.min(
+    (currentDhikr.count / currentDhikr.target) * 100 || 0,
+    100
+  );
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-between p-4 sm:p-6 bg-gradient-to-b from-blue-50 to-blue-100 dark:from-gray-800 dark:to-gray-900">
+    <div className="min-h-screen flex flex-col items-center justify-between p-4 sm:p-6 bg-gray-50 dark:bg-gray-900">
       {notification && (
-        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-full shadow-lg flex items-center">
-          <FaCheckCircle className="w-6 h-6 mr-2" />
-          <span className="text-lg">{notification.message}</span>
-        </div>
+        <motion.div
+          initial={{ y: 100, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: 100, opacity: 0 }}
+          className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-6 py-3 rounded-xl shadow-xl flex items-center space-x-2"
+        >
+          <FaCheckCircle className="w-5 h-5" />
+          <span className="text-sm font-medium">{notification.message}</span>
+        </motion.div>
       )}
-      <header className="mt-4">
-        <h1 className="text-4xl font-extrabold text-teal-700 dark:text-teal-300">السبحة الإلكترونية</h1>
+
+      <header className="mt-8">
+        <h1 className="text-3xl font-bold text-gray-800 dark:text-white font-arabic">
+          الســـبحة الإلكترونية
+        </h1>
       </header>
-      <main className="flex flex-col items-center justify-center flex-grow w-full">
-        {/* Dhikr Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl p-6 sm:p-8 w-full max-w-md text-center">
-          <div className="mb-6">{currentDhikr.icon}</div>
-          <h2 className="text-3xl font-bold mb-4 text-gray-800 dark:text-gray-200">{currentDhikr.label}</h2>
-          <div
-            className="text-7xl font-extrabold text-teal-600 cursor-pointer select-none mb-6"
-            onClick={() => handleDhikrIncrement(currentDhikr.id)}
-          >
-            <AnimatedNumber number={currentDhikr.count} />
+
+      <main className="flex flex-col items-center justify-center flex-grow w-full max-w-2xl">
+        <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 w-full max-w-md">
+          <div className="absolute inset-y-0 left-4 flex items-center">
+            <button
+              onClick={handlePrevious}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
+            >
+              <FaArrowLeft className="w-6 h-6 text-gray-500 dark:text-gray-400" />
+            </button>
           </div>
-          {currentDhikr.target > 0 && (
-            <div className="mb-6">
-              <div className="flex items-center justify-center mb-2">
-                <span className="text-xl text-gray-700 dark:text-gray-300">الهدف: {currentDhikr.target}</span>
-              </div>
-              <input
-                type="number"
-                value={currentDhikr.target}
-                onChange={(e) =>
-                  handleTargetChange(currentDhikr.id, parseInt(e.target.value) || 0)
-                }
-                className="w-24 p-2 text-center border rounded bg-gray-100 dark:bg-gray-700 dark:text-gray-200 mb-2"
-              />
-              <div className="w-full h-3 bg-gray-300 dark:bg-gray-600 rounded-full">
-                <div
-                  className="h-full bg-teal-500 rounded-full"
-                  style={{ width: `${Math.min((currentDhikr.count / currentDhikr.target) * 100, 100)}%` }}
-                ></div>
+          
+          <div className="absolute inset-y-0 right-4 flex items-center">
+            <button
+              onClick={handleNext}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
+            >
+              <FaArrowRight className="w-6 h-6 text-gray-500 dark:text-gray-400" />
+            </button>
+          </div>
+
+          <div className="flex flex-col items-center space-y-6">
+            <motion.div
+              key={currentDhikr.id}
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="p-4 rounded-xl bg-gray-100 dark:bg-gray-700"
+            >
+              {currentDhikr.icon}
+            </motion.div>
+
+            <h2 className="text-2xl font-semibold text-gray-800 dark:text-white font-arabic text-center">
+              {currentDhikr.label}
+            </h2>
+
+            <div className="relative w-40 h-40 flex items-center justify-center">
+              {currentDhikr.target > 0 && (
+                <svg className="absolute w-full h-full transform -rotate-90">
+                  <circle
+                    cx="50%"
+                    cy="50%"
+                    r="45%"
+                    className="stroke-current text-gray-200 dark:text-gray-600"
+                    strokeWidth="4"
+                    fill="transparent"
+                  />
+                  <circle
+                    cx="50%"
+                    cy="50%"
+                    r="45%"
+                    className="stroke-current text-gray-500"
+                    strokeWidth="4"
+                    fill="transparent"
+                    strokeDasharray={`${(2 * Math.PI * 45) * (progressPercentage / 100)} ${2 * Math.PI * 45}`}
+                    strokeLinecap="round"
+                  />
+                </svg>
+              )}
+              
+              <div 
+                className="text-6xl font-bold text-gray-800 dark:text-white cursor-pointer z-10"
+                onClick={() => handleDhikrIncrement(currentDhikr.id)}
+              >
+                <AnimatedNumber number={currentDhikr.count} />
               </div>
             </div>
-          )}
+
+            {currentDhikr.target > 0 && (
+              <div className="w-full space-y-6">
+                <div className="flex items-center justify-center space-x-4">
+                  <button
+                    onClick={() => handleTargetChange(currentDhikr.id, currentDhikr.target - 1)}
+                    className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                  >
+                    <span className="text-xl">−</span>
+                  </button>
+                  
+                  <div className="text-center">
+                    <div className="text-sm text-gray-600 dark:text-gray-300">الهدف</div>
+                    <div className="text-xl font-medium text-gray-800 dark:text-white">
+                      {currentDhikr.target}
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => handleTargetChange(currentDhikr.id, currentDhikr.target + 1)}
+                    className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                  >
+                    <span className="text-xl">+</span>
+                  </button>
+                </div>
+
+                <div className="flex justify-center gap-4">
+                  <button
+                    onClick={() => handleUndo(currentDhikr.id)}
+                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
+                  >
+                    <MdUndo className="w-5 h-5" />
+                    <span>تراجع</span>
+                  </button>
+
+                  <button
+                    onClick={() => resetDhikr(currentDhikr.id)}
+                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
+                  >
+                    <MdOutlineRestartAlt className="w-5 h-5" />
+                    <span>إعادة</span>
+                  </button>
+
+                  <button
+                    onClick={resetAll}
+                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
+                  >
+                    <MdOutlineRestartAlt className="w-5 h-5" />
+                    <span>الكل</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </main>
-      {/* Navigation & Controls */}
-      <div className="flex justify-around w-full max-w-md mt-8">
-        <button onClick={handlePrevious} className="flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full hover:bg-gray-300">
-          <span>السابق</span>
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-        <button onClick={() => handleUndo(currentDhikr.id)} className="flex items-center gap-2 px-4 py-2 bg-indigo-500 text-white rounded-full hover:bg-indigo-600">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h12M3 6h12M3 14h12" />
-          </svg>
-          <span>تراجع</span>
-        </button>
-        <button onClick={() => resetDhikr(currentDhikr.id)} className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-full hover:bg-red-600">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v16h16" />
-          </svg>
-          <span>تصفير</span>
-        </button>
-        <button onClick={handleNext} className="flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full hover:bg-gray-300">
-          <span>التالي</span>
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
-      </div>
-      <div className="mt-6">
-        <button onClick={resetAll} className="flex items-center gap-2 px-6 py-3 bg-red-600 text-white rounded-full hover:bg-red-700">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v16h16" />
-          </svg>
-          <span className="text-xl">إعادة تعيين جميع الأذكار</span>
-        </button>
-      </div>
     </div>
   );
 }

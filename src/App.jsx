@@ -7,6 +7,7 @@ import Tasbih from './pages/Tasbih';
 import HijriCalendar from './pages/HijriCalendar';
 import Books from './pages/Books';
 import { useTheme } from './context/ThemeContext';
+import Adkar from './pages/Adkar';
 
 function App() {
   const { theme } = useTheme();
@@ -28,6 +29,7 @@ function App() {
           <Route path="/tasbih" element={<Tasbih />} />
           <Route path="/calendar" element={<HijriCalendar />} />
           <Route path="/books" element={<Books />} />
+          <Route path="/adkar" element={<Adkar />}/>
         </Routes>
       </main>
       <footer
