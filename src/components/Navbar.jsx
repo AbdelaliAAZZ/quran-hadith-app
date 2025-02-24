@@ -1,8 +1,17 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import emailjs from 'emailjs-com';
 import { useTheme } from '../context/ThemeContext';
-import { FaExclamationTriangle, FaMoon, FaSun } from 'react-icons/fa';
+import { 
+  FaExclamationTriangle, 
+  FaMoon, 
+  FaSun, 
+  FaMosque, 
+  FaQuoteLeft, 
+  FaCalendarAlt, 
+  FaBookOpen 
+} from 'react-icons/fa';
+import { GiPrayerBeads } from 'react-icons/gi';
 import logo from '../assets/muslim.png';
 
 function Navbar() {
@@ -12,6 +21,16 @@ function Navbar() {
   const [reportMessage, setReportMessage] = useState('');
   const [reportEmail, setReportEmail] = useState('');
   const [toastMessage, setToastMessage] = useState('');
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  // Listen to scroll events for a blurred background effect
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const toggleTheme = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark');
@@ -32,10 +51,8 @@ function Navbar() {
       return;
     }
 
-    // Send report to admin
     emailjs.sendForm(SERVICE_ID, ADMIN_TEMPLATE, formRef.current, PUBLIC_KEY)
       .then(() => {
-        // Send auto-reply to user
         return emailjs.send(
           SERVICE_ID,
           USER_REPLY_TEMPLATE,
@@ -64,6 +81,8 @@ function Navbar() {
     setShowReportIssue(false);
   };
 
+  // For desktop, show text-only links; for mobile, show icons with text.
+  // In mobile links, onClick closes the menu.
   return (
     <>
       <style>{`
@@ -122,15 +141,15 @@ function Navbar() {
         }
       `}</style>
 
-      <nav className="bg-white dark:bg-gray-800 backdrop-blur-lg bg-opacity-90 shadow-lg sticky top-0 z-50" dir="rtl">
+      <nav className={`sticky top-0 z-50 transition-all duration-300 ${theme === 'dark' ? 'bg-gray-800' : 'bg-white'} ${isScrolled ? 'backdrop-blur-md bg-opacity-90' : 'bg-opacity-50'} shadow-lg`} dir="rtl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="flex-shrink-0 transform hover:scale-105 transition-transform duration-300">
-              <Link to="/">
+            <div className="flex-shrink-0 flex items-center">
+              <Link to="/" onClick={() => setIsOpen(false)} className="flex items-center">
                 <img src={logo} alt="Logo" className="h-10 w-auto" />
               </Link>
             </div>
-
+            {/* Desktop: text-only links */}
             <div className="hidden md:flex items-center space-x-8">
               <Link to="/quran" className="nav-link text-teal-700 dark:text-teal-300 px-3 py-2 transition-all duration-300">
                 القرآن الكريم
@@ -149,30 +168,23 @@ function Navbar() {
               </Link>
               <button
                 onClick={() => setShowReportIssue(true)}
-                className="flex items-center text-teal-700 dark:text-teal-300 px-3 py-2 transition-all duration-300"
+                className="nav-link text-teal-700 dark:text-teal-300 px-3 py-2 transition-all duration-300"
               >
-                <FaExclamationTriangle className="ml-2" />
-                <span className="nav-link">الإبلاغ عن مشكلة</span>
+                الإبلاغ عن مشكلة
               </button>
               <button
                 onClick={toggleTheme}
-                className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-transform duration-300 transform hover:rotate-180"
+                className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-transform duration-300"
               >
                 {theme === 'dark' ? <FaSun /> : <FaMoon />}
               </button>
             </div>
-
+            {/* Mobile: full screen menu with icons */}
             <div className="flex md:hidden items-center space-x-2">
-              <button
-                onClick={toggleTheme}
-                className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 transition-transform duration-300 transform hover:scale-110"
-              >
+              <button onClick={toggleTheme} className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 transition-transform duration-300">
                 {theme === 'dark' ? <FaSun /> : <FaMoon />}
               </button>
-              <button
-                onClick={() => setIsOpen((prev) => !prev)}
-                className="inline-flex items-center justify-center p-2 rounded-md text-teal-700 dark:text-teal-300 transition-transform duration-300 transform hover:scale-110"
-              >
+              <button onClick={() => setIsOpen(prev => !prev)} className="inline-flex items-center justify-center p-2 rounded-md text-teal-700 dark:text-teal-300 transition-transform duration-300">
                 <svg className="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   {isOpen ? (
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -184,31 +196,46 @@ function Navbar() {
             </div>
           </div>
         </div>
-
+        {/* Mobile Menu */}
         {isOpen && (
-          <div className="md:hidden bg-white dark:bg-gray-800 backdrop-blur-lg bg-opacity-95 animate-slide-down">
-            <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-              <Link to="/quran" className="block nav-link text-teal-700 dark:text-teal-300 hover:text-teal-900 dark:hover:text-teal-100 hover:bg-teal-50 dark:hover:bg-gray-700 px-3 py-2 rounded-md text-base font-medium text-right">
-                القرآن الكريم
+          <div className="md:hidden fixed inset-0 bg-white dark:bg-gray-800 z-40 flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+              <Link to="/" onClick={() => setIsOpen(false)} className="flex items-center">
+                <img src={logo} alt="Logo" className="h-10 w-auto" />
               </Link>
-              <Link to="/hadith" className="block nav-link text-teal-700 dark:text-teal-300 hover:text-teal-900 dark:hover:text-teal-100 hover:bg-teal-50 dark:hover:bg-gray-700 px-3 py-2 rounded-md text-base font-medium text-right">
-                الحديث الشريف
+              <button onClick={() => setIsOpen(false)} className="p-2">
+                <svg className="h-6 w-6 text-teal-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="flex flex-col flex-grow overflow-y-auto">
+              <Link to="/quran" onClick={() => setIsOpen(false)} className="flex items-center px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                <FaMosque className="mr-3 text-teal-700" />
+                <span className="text-lg text-teal-700">القرآن الكريم</span>
               </Link>
-              <Link to="/tasbih" className="block nav-link text-teal-700 dark:text-teal-300 hover:text-teal-900 dark:hover:text-teal-100 hover:bg-teal-50 dark:hover:bg-gray-700 px-3 py-2 rounded-md text-base font-medium text-right">
-                السبحة
+              <Link to="/hadith" onClick={() => setIsOpen(false)} className="flex items-center px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                <FaQuoteLeft className="mr-3 text-teal-700" />
+                <span className="text-lg text-teal-700">الحديث الشريف</span>
               </Link>
-              <Link to="/calendar" className="block nav-link text-teal-700 dark:text-teal-300 hover:text-teal-900 dark:hover:text-teal-100 hover:bg-teal-50 dark:hover:bg-gray-700 px-3 py-2 rounded-md text-base font-medium text-right">
-                التقويم
+              <Link to="/tasbih" onClick={() => setIsOpen(false)} className="flex items-center px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                <GiPrayerBeads className="mr-3 text-teal-700 w-6 h-6" />
+                <span className="text-lg text-teal-700">السبحة</span>
               </Link>
-              <Link to="/books" className="block nav-link text-teal-700 dark:text-teal-300 hover:text-teal-900 dark:hover:text-teal-100 hover:bg-teal-50 dark:hover:bg-gray-700 px-3 py-2 rounded-md text-base font-medium text-right">
-                الكتب
+              <Link to="/calendar" onClick={() => setIsOpen(false)} className="flex items-center px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                <FaCalendarAlt className="mr-3 text-teal-700" />
+                <span className="text-lg text-teal-700">التقويم</span>
+              </Link>
+              <Link to="/books" onClick={() => setIsOpen(false)} className="flex items-center px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                <FaBookOpen className="mr-3 text-teal-700" />
+                <span className="text-lg text-teal-700">الكتب</span>
               </Link>
               <button
-                onClick={() => setShowReportIssue(true)}
-                className="flex items-center w-full nav-link text-teal-700 dark:text-teal-300 hover:text-teal-900 dark:hover:text-teal-100 hover:bg-teal-50 dark:hover:bg-gray-700 px-3 py-2 rounded-md text-base font-medium text-right"
+                onClick={() => { setShowReportIssue(true); setIsOpen(false); }}
+                className="flex items-center px-4 py-3 border-b border-gray-200 dark:border-gray-700"
               >
-                <FaExclamationTriangle className="ml-2" />
-                الإبلاغ عن مشكلة
+                <FaExclamationTriangle className="mr-3 text-teal-700" />
+                <span className="text-lg text-teal-700">الإبلاغ عن مشكلة</span>
               </button>
             </div>
           </div>
@@ -251,17 +278,10 @@ function Navbar() {
               <input type="hidden" name="timestamp" value={new Date().toLocaleString('ar-EG')} />
               <input type="hidden" name="user_counter" value="1" />
               <div className="flex justify-between">
-                <button
-                  type="button"
-                  onClick={() => setShowReportIssue(false)}
-                  className="px-4 py-2 bg-gray-300 dark:bg-gray-600 rounded hover:bg-gray-400 transition-colors duration-300"
-                >
+                <button type="button" onClick={() => setShowReportIssue(false)} className="px-4 py-2 bg-gray-300 dark:bg-gray-600 rounded hover:bg-gray-400 transition-colors duration-300">
                   إلغاء
                 </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 transition-colors duration-300"
-                >
+                <button type="submit" className="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 transition-colors duration-300">
                   إرسال التقرير
                 </button>
               </div>
