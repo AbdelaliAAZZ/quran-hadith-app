@@ -5,103 +5,63 @@ import { GiPrayerBeads } from 'react-icons/gi';
 import { FaCheckCircle, FaArrowLeft, FaArrowRight, FaVolumeUp } from 'react-icons/fa';
 import { MdOutlineRestartAlt, MdUndo } from 'react-icons/md';
 
-// Mapping dhikr labels to their corresponding MP3 file paths based on your local files
+// Import the audio files from src/assets/adkar_audio
+import laIlahaIllallah from '../assets/adkar_audio/La ilaha illallah.mp3';
+import subhanallah from '../assets/adkar_audio/subhanallah.mp3';
+import alhamdulillah from '../assets/adkar_audio/alhamdulilah.mp3';
+import allahuAkbar from '../assets/adkar_audio/allahu akbar.mp3';
+import laHawlaWaLaQuwwataIllaBillah from '../assets/adkar_audio/La hawla wa la quwwata illa billah.mp3';
+import astaghfirullah from '../assets/adkar_audio/Astaghfirullah.mp3';
+import subhanAllahWaBihamdihiSubhanAllahilAdhim from '../assets/adkar_audio/Subhan-Allahi wa bihamdihi, Subhan-Allahil-Azim.mp3';
+import allahummaSalliAlaMuhammad from '../assets/adkar_audio/Allahumma Salli ala Muhammadin wa ala aali Muhammadin.mp3';
+import rabbighfirliWatubAlayya from '../assets/adkar_audio/Rabbighfirli watub alayya innaka antat-Tawwabul-Ghafur.mp3';
+import subhanAllahWalhamdulillah from '../assets/adkar_audio/Subhan-Allahi wa bihamdih.mp3';
+import laIlahaIllallahWahdahu from '../assets/adkar_audio/La ilaha illallah wahdahu la sharika lahu.mp3';
+
+// For the 2 new Adhkar below, replace the import paths with your actual MP3 filenames:
+import laIlahaIllaAnta from '../assets/adkar_audio/La ilaha illallah wahdahu la sharika lahu.mp3';
+import hasbiAllah from '../assets/adkar_audio/Rabbighfirli watub alayya innaka antat-Tawwabul-Ghafur.mp3';
+
+// Mapping dhikr labels to their corresponding imported audio files
 const audioMap = {
-  'الحمد لله': '/adkar_audio/alhamdulillah.mp3',
-  'الله أكبر': '/adkar_audio/allahu akbar.mp3',
-  'اللهم صل على محمد': '/adkar_audio/Allahumma Salli ala Muhamm.mp3',
-  'أستغفر الله': '/adkar_audio/Astagfirullah.mp3',
-  'لا حول ولا قوة إلا بالله': '/adkar_audio/La hawla wa la quwwata illa.mp3',
-  'لا إله إلا أنت سبحانك إني كنت من الظالمين': '/adkar_audio/La ilaha illallah wahdahu la.mp3',
-  'لا إله إلا الله': '/adkar_audio/La ilaha illallah.mp3',
-  'رب اغفر لي وتب علي إنك أنت التواب الرحيم': '/adkar_audio/Rabbighfirli watub alaya in.mp3',
-  'سبحان الله والحمد لله': '/adkar_audio/Subhan-Allah wal-hamdu-lil.mp3',
-  'سبحان الله وبحمده': '/adkar_audio/Subhan-Allah wi bihamdihi.mp3', // Note: This file appears multiple times; using one instance
-  'سبحان الله': '/adkar_audio/subhannallah.mp3',
+  'لا إله إلا الله': laIlahaIllallah,
+  'سبحان الله': subhanallah,
+  'الحمد لله': alhamdulillah,
+  'الله أكبر': allahuAkbar,
+  'لا حول ولا قوة إلا بالله': laHawlaWaLaQuwwataIllaBillah,
+  'أستغفر الله': astaghfirullah,
+  'سبحان الله وبحمده': subhanAllahWaBihamdihiSubhanAllahilAdhim,
+  'اللهم صل على محمد': allahummaSalliAlaMuhammad,
+  'رب اغفر لي وتب علي إنك أنت التواب الرحيم': rabbighfirliWatubAlayya,
+  'سبحان الله والحمد لله': subhanAllahWalhamdulillah,
+  'لا إله إلا الله وحده لا شريك له': laIlahaIllallahWahdahu,
+  'لا إله إلا أنت سبحانك إني كنت من الظالمين': laIlahaIllaAnta,
+  'حسبي الله ونعم الوكيل': hasbiAllah,
 };
 
-// Default dhikr list with labels, counts, and targets (13 items matching your audio files)
+// Default dhikr list (13 total) with labels, counts, and targets
 const defaultDhikrList = [
-  {
-    id: 1,
-    label: 'لا إله إلا الله',
-    count: 0,
-    target: 100,
-    icon: <GiPrayerBeads className="w-20 h-20 text-gray-600 dark:text-gray-300" />,
-  },
-  {
-    id: 2,
-    label: 'سبحان الله',
-    count: 0,
-    target: 33,
-    icon: <GiPrayerBeads className="w-20 h-20 text-gray-600 dark:text-gray-300" />,
-  },
-  {
-    id: 3,
-    label: 'الحمد لله',
-    count: 0,
-    target: 33,
-    icon: <GiPrayerBeads className="w-20 h-20 text-gray-600 dark:text-gray-300" />,
-  },
-  {
-    id: 4,
-    label: 'الله أكبر',
-    count: 0,
-    target: 33,
-    icon: <GiPrayerBeads className="w-20 h-20 text-gray-600 dark:text-gray-300" />,
-  },
-  {
-    id: 5,
-    label: 'لا حول ولا قوة إلا بالله',
-    count: 0,
-    target: 33,
-    icon: <GiPrayerBeads className="w-20 h-20 text-gray-600 dark:text-gray-300" />,
-  },
-  {
-    id: 6,
-    label: 'أستغفر الله',
-    count: 0,
-    target: 100,
-    icon: <GiPrayerBeads className="w-20 h-20 text-gray-600 dark:text-gray-300" />,
-  },
-  {
-    id: 7,
-    label: 'سبحان الله وبحمده',
-    count: 0,
-    target: 100,
-    icon: <GiPrayerBeads className="w-20 h-20 text-gray-600 dark:text-gray-300" />,
-  },
-  {
-    id: 8,
-    label: 'اللهم صل على محمد',
-    count: 0,
-    target: 100,
-    icon: <GiPrayerBeads className="w-20 h-20 text-gray-600 dark:text-gray-300" />,
-  },
-  {
-    id: 9,
-    label: 'رب اغفر لي وتب علي إنك أنت التواب الرحيم',
-    count: 0,
-    target: 100,
-    icon: <GiPrayerBeads className="w-20 h-20 text-gray-600 dark:text-gray-300" />,
-  },
-  {
-    id: 10,
-    label: 'سبحان الله والحمد لله',
-    count: 0,
-    target: 100,
-    icon: <GiPrayerBeads className="w-20 h-20 text-gray-600 dark:text-gray-300" />,
-  },
-  {
-    id: 11,
-    label: 'لا إله إلا أنت سبحانك إني كنت من الظالمين',
-    count: 0,
-    target: 100,
-    icon: <GiPrayerBeads className="w-20 h-20 text-gray-600 dark:text-gray-300" />,
-  },
+  { id: 1, label: 'لا إله إلا الله', count: 0, target: 100 },
+  { id: 2, label: 'سبحان الله', count: 0, target: 33 },
+  { id: 3, label: 'الحمد لله', count: 0, target: 33 },
+  { id: 4, label: 'الله أكبر', count: 0, target: 33 },
+  { id: 5, label: 'لا حول ولا قوة إلا بالله', count: 0, target: 33 },
+  { id: 6, label: 'أستغفر الله', count: 0, target: 100 },
+  { id: 7, label: 'سبحان الله وبحمده', count: 0, target: 100 },
+  { id: 8, label: 'اللهم صل على محمد', count: 0, target: 100 },
+  { id: 9, label: 'رب اغفر لي وتب علي إنك أنت التواب الرحيم', count: 0, target: 100 },
+  { id: 10, label: 'سبحان الله والحمد لله', count: 0, target: 100 },
+  { id: 11, label: 'لا إله إلا الله وحده لا شريك له', count: 0, target: 100 },
+  { id: 12, label: 'لا إله إلا أنت سبحانك إني كنت من الظالمين', count: 0, target: 100 },
+  { id: 13, label: 'حسبي الله ونعم الوكيل', count: 0, target: 100 },
 ];
 
-// AnimatedNumber component for count animation
+// Simple big icon for each dhikr
+function getDhikrIcon() {
+  return <GiPrayerBeads className="w-20 h-20 text-gray-600 dark:text-gray-300" />;
+}
+
+// Animated number for the count
 const AnimatedNumber = ({ number }) => (
   <span className="inline-flex items-center">
     <AnimatePresence mode="wait">
@@ -118,30 +78,34 @@ const AnimatedNumber = ({ number }) => (
     </AnimatePresence>
   </span>
 );
-
-AnimatedNumber.propTypes = {
-  number: PropTypes.number.isRequired,
-};
+AnimatedNumber.propTypes = { number: PropTypes.number.isRequired };
 
 function Tasbih() {
-  const [dhikrList, setDhikrList] = useState(defaultDhikrList);
+  const [dhikrList, setDhikrList] = useState(
+    defaultDhikrList.map(d => ({ ...d, icon: getDhikrIcon() }))
+  );
   const [currentIndex, setCurrentIndex] = useState(0);
   const [notification, setNotification] = useState(null);
 
-  // Load saved data from localStorage
+  // Keep track of currently playing audio so we can stop it
+  const [currentAudio, setCurrentAudio] = useState(null);
+
+  // Load saved data from localStorage on mount
   useEffect(() => {
     const saved = localStorage.getItem('tasbihData');
     if (saved) {
       const parsed = JSON.parse(saved);
       const merged = defaultDhikrList.map(item => {
         const savedItem = parsed.find(x => x.id === item.id);
-        return savedItem ? { ...item, count: savedItem.count, target: savedItem.target } : item;
+        return savedItem
+          ? { ...item, count: savedItem.count, target: savedItem.target, icon: getDhikrIcon() }
+          : { ...item, icon: getDhikrIcon() };
       });
       setDhikrList(merged);
     }
   }, []);
 
-  // Save data to localStorage when dhikrList changes
+  // Save data to localStorage whenever dhikrList changes
   useEffect(() => {
     const toStore = dhikrList.map(({ id, count, target }) => ({ id, count, target }));
     localStorage.setItem('tasbihData', JSON.stringify(toStore));
@@ -157,12 +121,18 @@ function Tasbih() {
 
   const currentDhikr = dhikrList[currentIndex];
 
-  // Function to play the corresponding MP3 file
+  // Function to play the corresponding MP3 file, stopping any previously playing audio
   const speakDhikr = (label) => {
-    const audioPath = audioMap[label];
-    if (audioPath) {
-      const audio = new Audio(audioPath);
+    // Stop previous audio if playing
+    if (currentAudio) {
+      currentAudio.pause();
+      currentAudio.currentTime = 0;
+    }
+    const audioFile = audioMap[label];
+    if (audioFile) {
+      const audio = new Audio(audioFile);
       audio.play().catch(err => console.error('Audio playback error:', err));
+      setCurrentAudio(audio);
     } else {
       console.error('No audio file found for:', label);
     }
@@ -174,7 +144,9 @@ function Tasbih() {
         if (dhikr.id === id) {
           const newCount = dhikr.count + 1;
           if (dhikr.target > 0 && newCount === dhikr.target) {
-            setNotification({ message: `🎉 لقد وصلت إلى الهدف (${dhikr.target}) لـ: ${dhikr.label}` });
+            setNotification({
+              message: `🎉 لقد وصلت إلى الهدف (${dhikr.target}) لـ: ${dhikr.label}`
+            });
           }
           return { ...dhikr, count: newCount };
         }
@@ -202,7 +174,9 @@ function Tasbih() {
 
   const handleTargetChange = (id, newTarget) => {
     setDhikrList(prevList =>
-      prevList.map(dhikr => (dhikr.id === id ? { ...dhikr, target: Math.max(0, newTarget) } : dhikr))
+      prevList.map(dhikr =>
+        dhikr.id === id ? { ...dhikr, target: Math.max(0, newTarget) } : dhikr
+      )
     );
   };
 
@@ -224,7 +198,7 @@ function Tasbih() {
     100
   );
 
-  // Determine if the current dhikr is long and needs a different layout
+  // Check if the dhikr is "long" for layout adjustment
   const isLongDhikr = currentDhikr.label.length > 20;
 
   return (
@@ -249,6 +223,7 @@ function Tasbih() {
 
       <main className="flex flex-col items-center justify-center flex-grow w-full max-w-2xl">
         <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 w-full max-w-md">
+          {/* Navigation Arrows */}
           <div className="absolute inset-y-0 left-4 flex items-center">
             <button
               onClick={handlePrevious}
@@ -257,7 +232,6 @@ function Tasbih() {
               <FaArrowLeft className="w-6 h-6 text-gray-500 dark:text-gray-400" />
             </button>
           </div>
-
           <div className="absolute inset-y-0 right-4 flex items-center">
             <button
               onClick={handleNext}
@@ -268,6 +242,7 @@ function Tasbih() {
           </div>
 
           <div className="flex flex-col items-center space-y-6">
+            {/* Dhikr Icon */}
             <motion.div
               key={currentDhikr.id}
               initial={{ scale: 0.8, opacity: 0 }}
@@ -277,8 +252,17 @@ function Tasbih() {
               {currentDhikr.icon}
             </motion.div>
 
-            <div className={`flex items-center justify-center space-x-4 ${isLongDhikr ? 'flex-col space-y-4' : 'flex-row'}`}>
-              <h2 className={`text-2xl font-semibold text-gray-800 dark:text-white font-arabic text-center ${isLongDhikr ? 'text-xl' : ''}`}>
+            {/* Dhikr Label + Audio Button */}
+            <div
+              className={`flex items-center justify-center space-x-4 ${
+                isLongDhikr ? 'flex-col space-y-4' : 'flex-row'
+              }`}
+            >
+              <h2
+                className={`text-2xl font-semibold text-gray-800 dark:text-white font-arabic text-center ${
+                  isLongDhikr ? 'text-xl' : ''
+                }`}
+              >
                 {currentDhikr.label}
               </h2>
               <button
@@ -291,6 +275,7 @@ function Tasbih() {
               </button>
             </div>
 
+            {/* Circle Progress + Count */}
             <div className="relative w-40 h-40 flex items-center justify-center">
               {currentDhikr.target > 0 && (
                 <svg className="absolute w-full h-full transform -rotate-90">
@@ -309,7 +294,9 @@ function Tasbih() {
                     className="stroke-current text-gray-500"
                     strokeWidth="4"
                     fill="transparent"
-                    strokeDasharray={`${(2 * Math.PI * 45) * (progressPercentage / 100)} ${2 * Math.PI * 45}`}
+                    strokeDasharray={`${(2 * Math.PI * 45) * (progressPercentage / 100)} ${
+                      2 * Math.PI * 45
+                    }`}
                     strokeLinecap="round"
                   />
                 </svg>
@@ -323,6 +310,7 @@ function Tasbih() {
               </div>
             </div>
 
+            {/* Target Adjust / Undo / Reset */}
             {currentDhikr.target > 0 && (
               <div className="w-full space-y-6">
                 <div className="flex items-center justify-center space-x-4">
