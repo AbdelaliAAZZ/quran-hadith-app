@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import PropTypes from 'prop-types';
 import { GiPrayerBeads } from 'react-icons/gi';
-import { FaCheckCircle, FaArrowLeft, FaArrowRight } from 'react-icons/fa';
+import { FaCheckCircle, FaArrowLeft, FaArrowRight, FaVolumeUp } from 'react-icons/fa';
 import { MdOutlineRestartAlt, MdUndo } from 'react-icons/md';
 
 const defaultDhikrList = [
@@ -103,7 +103,9 @@ function Tasbih() {
   const [dhikrList, setDhikrList] = useState(defaultDhikrList);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [notification, setNotification] = useState(null);
+  const [selectedVoice, setSelectedVoice] = useState(null);
 
+  // Load saved data from localStorage
   useEffect(() => {
     const saved = localStorage.getItem('tasbihData');
     if (saved) {
@@ -116,11 +118,13 @@ function Tasbih() {
     }
   }, []);
 
+  // Save data to localStorage when dhikrList changes
   useEffect(() => {
     const toStore = dhikrList.map(({ id, count, target }) => ({ id, count, target }));
     localStorage.setItem('tasbihData', JSON.stringify(toStore));
   }, [dhikrList]);
 
+  // Clear notification after 3 seconds
   useEffect(() => {
     if (notification) {
       const timer = setTimeout(() => setNotification(null), 3000);
@@ -128,7 +132,51 @@ function Tasbih() {
     }
   }, [notification]);
 
+  // Initialize speech synthesis and load voices
+  useEffect(() => {
+    if ('speechSynthesis' in window) {
+      console.log('Speech synthesis is supported');
+      const loadVoices = () => {
+        const voices = window.speechSynthesis.getVoices();
+        console.log('Available voices:', voices);
+        const arabicVoice = voices.find(voice => voice.lang.startsWith('ar'));
+        const voiceToUse = arabicVoice || voices[0];
+        setSelectedVoice(voiceToUse);
+        console.log('Selected voice:', voiceToUse);
+        if (voiceToUse) {
+          console.log('Selected voice language:', voiceToUse.lang);
+        }
+      };
+
+      loadVoices(); // Initial attempt to load voices
+      window.speechSynthesis.onvoiceschanged = loadVoices; // Update when voices are available
+
+      // Cleanup event listener
+      return () => {
+        window.speechSynthesis.onvoiceschanged = null;
+      };
+    } else {
+      console.log('Speech synthesis is not supported');
+    }
+  }, []);
+
   const currentDhikr = dhikrList[currentIndex];
+
+  // Function to speak the dhikr text
+  const speakDhikr = (text) => {
+    console.log('Attempting to speak:', text);
+    if (selectedVoice) {
+      console.log('Speaking with voice:', selectedVoice.name, 'lang:', selectedVoice.lang);
+      window.speechSynthesis.cancel(); // Stop any ongoing speech
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.voice = selectedVoice;
+      utterance.lang = 'ar'; // Explicitly set language to Arabic
+      utterance.onerror = (event) => console.error('Speech synthesis error:', event);
+      window.speechSynthesis.speak(utterance);
+    } else {
+      console.log('Cannot speak: no voice selected');
+    }
+  };
 
   const handleDhikrIncrement = (id) => {
     setDhikrList(prevList =>
@@ -239,9 +287,19 @@ function Tasbih() {
               {currentDhikr.icon}
             </motion.div>
 
-            <h2 className="text-2xl font-semibold text-gray-800 dark:text-white font-arabic text-center">
-              {currentDhikr.label}
-            </h2>
+            <div className="flex items-center justify-center space-x-4">
+              <h2 className="text-2xl font-semibold text-gray-800 dark:text-white font-arabic text-center">
+                {currentDhikr.label}
+              </h2>
+              <button
+                onClick={() => speakDhikr(currentDhikr.label)}
+                className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                title="استمع إلى الذكر"
+                aria-label="استمع إلى الذكر"
+              >
+                <FaVolumeUp className="w-6 h-6 text-gray-500 dark:text-gray-400" />
+              </button>
+            </div>
 
             <div className="relative w-40 h-40 flex items-center justify-center">
               {currentDhikr.target > 0 && (
