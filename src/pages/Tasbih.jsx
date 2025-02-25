@@ -5,6 +5,22 @@ import { GiPrayerBeads } from 'react-icons/gi';
 import { FaCheckCircle, FaArrowLeft, FaArrowRight, FaVolumeUp } from 'react-icons/fa';
 import { MdOutlineRestartAlt, MdUndo } from 'react-icons/md';
 
+// Mapping dhikr labels to their corresponding MP3 file paths based on your local files
+const audioMap = {
+  'الحمد لله': '/adkar_audio/alhamdulillah.mp3',
+  'الله أكبر': '/adkar_audio/allahu akbar.mp3',
+  'اللهم صل على محمد': '/adkar_audio/Allahumma Salli ala Muhamm.mp3',
+  'أستغفر الله': '/adkar_audio/Astagfirullah.mp3',
+  'لا حول ولا قوة إلا بالله': '/adkar_audio/La hawla wa la quwwata illa.mp3',
+  'لا إله إلا أنت سبحانك إني كنت من الظالمين': '/adkar_audio/La ilaha illallah wahdahu la.mp3',
+  'لا إله إلا الله': '/adkar_audio/La ilaha illallah.mp3',
+  'رب اغفر لي وتب علي إنك أنت التواب الرحيم': '/adkar_audio/Rabbighfirli watub alaya in.mp3',
+  'سبحان الله والحمد لله': '/adkar_audio/Subhan-Allah wal-hamdu-lil.mp3',
+  'سبحان الله وبحمده': '/adkar_audio/Subhan-Allah wi bihamdihi.mp3', // Note: This file appears multiple times; using one instance
+  'سبحان الله': '/adkar_audio/subhannallah.mp3',
+};
+
+// Default dhikr list with labels, counts, and targets (13 items matching your audio files)
 const defaultDhikrList = [
   {
     id: 1,
@@ -50,37 +66,45 @@ const defaultDhikrList = [
   },
   {
     id: 7,
-    label: 'سبحان الله العظيم',
+    label: 'سبحان الله وبحمده',
     count: 0,
-    target: 33,
+    target: 100,
     icon: <GiPrayerBeads className="w-20 h-20 text-gray-600 dark:text-gray-300" />,
   },
   {
     id: 8,
-    label: 'الحمد لله رب العالمين',
+    label: 'اللهم صل على محمد',
     count: 0,
-    target: 33,
+    target: 100,
     icon: <GiPrayerBeads className="w-20 h-20 text-gray-600 dark:text-gray-300" />,
   },
   {
     id: 9,
-    label: 'لا إله إلا أنت سبحانك إني كنت من الظالمين',
+    label: 'رب اغفر لي وتب علي إنك أنت التواب الرحيم',
     count: 0,
     target: 100,
     icon: <GiPrayerBeads className="w-20 h-20 text-gray-600 dark:text-gray-300" />,
   },
   {
     id: 10,
-    label: 'سبحان الله وبحمده',
+    label: 'سبحان الله والحمد لله',
+    count: 0,
+    target: 100,
+    icon: <GiPrayerBeads className="w-20 h-20 text-gray-600 dark:text-gray-300" />,
+  },
+  {
+    id: 11,
+    label: 'لا إله إلا أنت سبحانك إني كنت من الظالمين',
     count: 0,
     target: 100,
     icon: <GiPrayerBeads className="w-20 h-20 text-gray-600 dark:text-gray-300" />,
   },
 ];
 
+// AnimatedNumber component for count animation
 const AnimatedNumber = ({ number }) => (
   <span className="inline-flex items-center">
-    <AnimatePresence mode='wait'>
+    <AnimatePresence mode="wait">
       <motion.span
         key={number}
         initial={{ y: -20, opacity: 0 }}
@@ -103,7 +127,6 @@ function Tasbih() {
   const [dhikrList, setDhikrList] = useState(defaultDhikrList);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [notification, setNotification] = useState(null);
-  const [selectedVoice, setSelectedVoice] = useState(null);
 
   // Load saved data from localStorage
   useEffect(() => {
@@ -132,49 +155,16 @@ function Tasbih() {
     }
   }, [notification]);
 
-  // Initialize speech synthesis and load voices
-  useEffect(() => {
-    if ('speechSynthesis' in window) {
-      console.log('Speech synthesis is supported');
-      const loadVoices = () => {
-        const voices = window.speechSynthesis.getVoices();
-        console.log('Available voices:', voices);
-        const arabicVoice = voices.find(voice => voice.lang.startsWith('ar'));
-        const voiceToUse = arabicVoice || voices[0];
-        setSelectedVoice(voiceToUse);
-        console.log('Selected voice:', voiceToUse);
-        if (voiceToUse) {
-          console.log('Selected voice language:', voiceToUse.lang);
-        }
-      };
-
-      loadVoices(); // Initial attempt to load voices
-      window.speechSynthesis.onvoiceschanged = loadVoices; // Update when voices are available
-
-      // Cleanup event listener
-      return () => {
-        window.speechSynthesis.onvoiceschanged = null;
-      };
-    } else {
-      console.log('Speech synthesis is not supported');
-    }
-  }, []);
-
   const currentDhikr = dhikrList[currentIndex];
 
-  // Function to speak the dhikr text
-  const speakDhikr = (text) => {
-    console.log('Attempting to speak:', text);
-    if (selectedVoice) {
-      console.log('Speaking with voice:', selectedVoice.name, 'lang:', selectedVoice.lang);
-      window.speechSynthesis.cancel(); // Stop any ongoing speech
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.voice = selectedVoice;
-      utterance.lang = 'ar'; // Explicitly set language to Arabic
-      utterance.onerror = (event) => console.error('Speech synthesis error:', event);
-      window.speechSynthesis.speak(utterance);
+  // Function to play the corresponding MP3 file
+  const speakDhikr = (label) => {
+    const audioPath = audioMap[label];
+    if (audioPath) {
+      const audio = new Audio(audioPath);
+      audio.play().catch(err => console.error('Audio playback error:', err));
     } else {
-      console.log('Cannot speak: no voice selected');
+      console.error('No audio file found for:', label);
     }
   };
 
@@ -212,16 +202,13 @@ function Tasbih() {
 
   const handleTargetChange = (id, newTarget) => {
     setDhikrList(prevList =>
-      prevList.map(dhikr => (dhikr.id === id ? { 
-        ...dhikr, 
-        target: Math.max(0, newTarget) 
-      } : dhikr))
+      prevList.map(dhikr => (dhikr.id === id ? { ...dhikr, target: Math.max(0, newTarget) } : dhikr))
     );
   };
 
   const resetAll = () => {
     setDhikrList(prevList => prevList.map(dhikr => ({ ...dhikr, count: 0 })));
-    setNotification({ message: "تم تصفير جميع العدادات" });
+    setNotification({ message: 'تم تصفير جميع العدادات' });
   };
 
   const handlePrevious = () => {
@@ -236,6 +223,9 @@ function Tasbih() {
     (currentDhikr.count / currentDhikr.target) * 100 || 0,
     100
   );
+
+  // Determine if the current dhikr is long and needs a different layout
+  const isLongDhikr = currentDhikr.label.length > 20;
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-between p-4 sm:p-6 bg-gray-50 dark:bg-gray-900">
@@ -267,7 +257,7 @@ function Tasbih() {
               <FaArrowLeft className="w-6 h-6 text-gray-500 dark:text-gray-400" />
             </button>
           </div>
-          
+
           <div className="absolute inset-y-0 right-4 flex items-center">
             <button
               onClick={handleNext}
@@ -287,8 +277,8 @@ function Tasbih() {
               {currentDhikr.icon}
             </motion.div>
 
-            <div className="flex items-center justify-center space-x-4">
-              <h2 className="text-2xl font-semibold text-gray-800 dark:text-white font-arabic text-center">
+            <div className={`flex items-center justify-center space-x-4 ${isLongDhikr ? 'flex-col space-y-4' : 'flex-row'}`}>
+              <h2 className={`text-2xl font-semibold text-gray-800 dark:text-white font-arabic text-center ${isLongDhikr ? 'text-xl' : ''}`}>
                 {currentDhikr.label}
               </h2>
               <button
@@ -324,8 +314,8 @@ function Tasbih() {
                   />
                 </svg>
               )}
-              
-              <div 
+
+              <div
                 className="text-6xl font-bold text-gray-800 dark:text-white cursor-pointer z-10"
                 onClick={() => handleDhikrIncrement(currentDhikr.id)}
               >
@@ -342,7 +332,7 @@ function Tasbih() {
                   >
                     <span className="text-xl">−</span>
                   </button>
-                  
+
                   <div className="text-center">
                     <div className="text-sm text-gray-600 dark:text-gray-300">الهدف</div>
                     <div className="text-xl font-medium text-gray-800 dark:text-white">

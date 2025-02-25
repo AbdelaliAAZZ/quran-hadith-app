@@ -4,7 +4,7 @@ import { FaArrowLeft, FaArrowRight } from 'react-icons/fa';
 import { WiSunrise, WiDaySunny, WiSunset, WiMoonAltFull } from 'react-icons/wi';
 
 // --- Local Hijri-Gregorian Conversion Functions ---
-// Convert Hijri date to Julian Day using a formula similar to Umm al-Qura
+// Convert Hijri date to Julian Day (using an Umm al-Qura–like formula)
 function hijriToJD(year, month, day) {
   return (
     day +
@@ -77,6 +77,8 @@ const HijriCalendar = () => {
   const [searchHijriMonth, setSearchHijriMonth] = useState(1);
   const [searchHijriYear, setSearchHijriYear] = useState(1444);
   const [calendarData, setCalendarData] = useState([]);
+  // Store today's Hijri date from the API for proper highlighting
+  const [currentHijriDate, setCurrentHijriDate] = useState(null);
 
   // Conversion Tool States
   const [showConversionTool, setShowConversionTool] = useState(false);
@@ -103,7 +105,7 @@ const HijriCalendar = () => {
 
   const weekDays = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
 
-  // Prayer Icons Mapping (using original design)
+  // Prayer Icons Mapping
   const prayerIcons = {
     Fajr: <WiSunrise className="text-3xl" />,
     Sunrise: <WiSunrise className="text-3xl" />,
@@ -163,14 +165,10 @@ const HijriCalendar = () => {
         },
         (error) => {
           console.error('Location error:', error);
-          // If permission denied, use fallback coordinates (e.g., Mecca)
-          if (error.code === error.PERMISSION_DENIED) {
-            const fallback = { lat: 21.3891, lng: 39.8579 };
-            setUserLocation(fallback);
-            fetchPrayerTimes(fallback);
-          } else {
-            setLocationError('يرجى تفعيل الموقع');
-          }
+          // Use fallback coordinates (e.g., Mecca) if permission is denied
+          const fallback = { lat: 21.3891, lng: 39.8579 };
+          setUserLocation(fallback);
+          fetchPrayerTimes(fallback);
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
@@ -179,7 +177,7 @@ const HijriCalendar = () => {
     }
   };
 
-  // Set calendar to today's Hijri date using Aladhan conversion API
+  // Set calendar to today's Hijri date using Aladhan conversion API and store currentHijriDate
   const goToToday = async () => {
     const now = new Date();
     const url = `https://api.aladhan.com/v1/gToH?date=${now.getDate()}-${now.getMonth() + 1}-${now.getFullYear()}&method=4`;
@@ -190,17 +188,19 @@ const HijriCalendar = () => {
         const hijri = data.data.hijri;
         const hijriMonth = parseInt(hijri.month.number);
         const hijriYear = parseInt(hijri.year);
+        const hijriDay = parseInt(hijri.day);
         setSelectedHijriMonth(hijriMonth);
         setSelectedHijriYear(hijriYear);
         setSearchHijriMonth(hijriMonth);
         setSearchHijriYear(hijriYear);
+        setCurrentHijriDate({ day: hijriDay, month: hijriMonth, year: hijriYear });
       }
     } catch (e) {
       console.error(e);
     }
   };
 
-  // On mount, set default calendar to today's Hijri date (via Aladhan API)
+  // On mount, get today's Hijri date (via Aladhan API) and store it
   useEffect(() => {
     const getHijriToday = async () => {
       const url = `https://api.aladhan.com/v1/gToH?date=${today.getDate()}-${today.getMonth() + 1}-${today.getFullYear()}&method=4`;
@@ -211,10 +211,12 @@ const HijriCalendar = () => {
           const hijri = data.data.hijri;
           const hijriMonth = parseInt(hijri.month.number);
           const hijriYear = parseInt(hijri.year);
+          const hijriDay = parseInt(hijri.day);
           setSelectedHijriMonth(hijriMonth);
           setSelectedHijriYear(hijriYear);
           setSearchHijriMonth(hijriMonth);
           setSearchHijriYear(hijriYear);
+          setCurrentHijriDate({ day: hijriDay, month: hijriMonth, year: hijriYear });
         }
       } catch (e) {
         console.error(e);
@@ -289,12 +291,7 @@ const HijriCalendar = () => {
   let offset = 0;
   if (calendarData.length > 0) {
     const firstDay = calendarData[0].gregorian.jsDate;
-    const dayOfWeek = firstDay.getFullYear() === today.getFullYear() &&
-                      firstDay.getMonth() === today.getMonth() &&
-                      firstDay.getDate() === today.getDate()
-                      ? firstDay.getDay()
-                      : firstDay.getDay();
-    offset = (dayOfWeek + 1) % 7;
+    offset = (firstDay.getDay() + 1) % 7;
   }
   const totalCells = offset + calendarData.length;
 
@@ -344,7 +341,7 @@ const HijriCalendar = () => {
           ) : prayerError ? (
             <p className="text-center text-red-500">{prayerError}</p>
           ) : prayerTimes ? (
-            <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
               {Object.entries(prayerTimes).map(([prayer, time]) => (
                 <div key={prayer} className="flex items-center justify-between p-3 bg-white dark:bg-gray-600 rounded shadow">
                   <div className="flex items-center gap-2">
@@ -420,17 +417,20 @@ const HijriCalendar = () => {
               } else {
                 const dayIndex = index - offset;
                 const dayData = calendarData[dayIndex];
-                const jsDate = dayData.gregorian.jsDate;
+                // Highlight if this cell matches today's Hijri date
                 const isToday =
-                  jsDate.getFullYear() === today.getFullYear() &&
-                  jsDate.getMonth() === today.getMonth() &&
-                  jsDate.getDate() === today.getDate();
+                  currentHijriDate &&
+                  dayData.hijri.day === currentHijriDate.day &&
+                  dayData.hijri.month.number === currentHijriDate.month &&
+                  dayData.hijri.year === currentHijriDate.year;
                 return (
                   <div
                     key={index}
                     className={`p-2 border h-28 relative cursor-pointer rounded transition-transform duration-200 transform ${
                       isToday
-                        ? 'bg-yellow-300 dark:bg-yellow-600'
+                        ? theme === 'dark'
+                          ? 'bg-teal-700'
+                          : 'bg-teal-500'
                         : theme === 'dark'
                         ? 'bg-gray-800 hover:bg-gray-700'
                         : 'bg-white hover:bg-teal-100'
