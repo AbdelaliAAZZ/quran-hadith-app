@@ -86,8 +86,6 @@ function Tasbih() {
   );
   const [currentIndex, setCurrentIndex] = useState(0);
   const [notification, setNotification] = useState(null);
-
-  // Keep track of currently playing audio so we can stop it
   const [currentAudio, setCurrentAudio] = useState(null);
 
   // Load saved data from localStorage on mount
@@ -130,7 +128,9 @@ function Tasbih() {
     }
     const audioFile = audioMap[label];
     if (audioFile) {
-      const audio = new Audio(audioFile);
+      // For module compatibility, check if the imported file has a default property
+      const audioSrc = audioFile.default ? audioFile.default : audioFile;
+      const audio = new Audio(audioSrc);
       audio.play().catch(err => console.error('Audio playback error:', err));
       setCurrentAudio(audio);
     } else {
@@ -198,7 +198,7 @@ function Tasbih() {
     100
   );
 
-  // Check if the dhikr is "long" for layout adjustment
+  // Check if the dhikr label is "long" for layout adjustment
   const isLongDhikr = currentDhikr.label.length > 20;
 
   return (
@@ -313,29 +313,37 @@ function Tasbih() {
             {/* Target Adjust / Undo / Reset */}
             {currentDhikr.target > 0 && (
               <div className="w-full space-y-6">
-                <div className="flex items-center justify-center space-x-4">
-                  <button
-                    onClick={() => handleTargetChange(currentDhikr.id, currentDhikr.target - 1)}
-                    className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
-                  >
-                    <span className="text-xl">−</span>
-                  </button>
-
-                  <div className="text-center">
-                    <div className="text-sm text-gray-600 dark:text-gray-300">الهدف</div>
-                    <div className="text-xl font-medium text-gray-800 dark:text-white">
-                      {currentDhikr.target}
-                    </div>
+                {/* Label + (Minus, Input, Plus) on same line, same height */}
+                <div className="flex flex-col items-center space-y-2">
+                  <span className="text-sm text-gray-600 dark:text-gray-300">الهدف</span>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => handleTargetChange(currentDhikr.id, currentDhikr.target - 1)}
+                      className="w-12 h-12 flex items-center justify-center text-xl rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      −
+                    </button>
+                    <input
+                      type="number"
+                      value={currentDhikr.target}
+                      onChange={(e) =>
+                        handleTargetChange(
+                          currentDhikr.id,
+                          parseInt(e.target.value) || 0
+                        )
+                      }
+                      className="w-20 h-12 px-3 text-center border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800 text-2xl text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <button
+                      onClick={() => handleTargetChange(currentDhikr.id, currentDhikr.target + 1)}
+                      className="w-12 h-12 flex items-center justify-center text-xl rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      +
+                    </button>
                   </div>
-
-                  <button
-                    onClick={() => handleTargetChange(currentDhikr.id, currentDhikr.target + 1)}
-                    className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
-                  >
-                    <span className="text-xl">+</span>
-                  </button>
                 </div>
 
+                {/* Undo / Reset Single / Reset All */}
                 <div className="flex justify-center gap-4">
                   <button
                     onClick={() => handleUndo(currentDhikr.id)}

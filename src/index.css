@@ -1,15 +1,17 @@
+@import url('https://fonts.googleapis.com/css2?family=Amiri&family=Reem+Kufi&family=Lateef&family=Scheherazade&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Amiri&family=Reem+Kufi&family=Lateef&family=Scheherazade&display=swap');
-
+/* Root variables */
 :root {
   --main-font-family: 'Amiri', serif;
   --main-font-size: 1rem;
   color-scheme: light dark;
 }
 
+/* Utility classes for Arabic fonts */
 .font-selectable {
   font-family: var(--main-font-family);
   font-size: var(--main-font-size);
@@ -19,6 +21,7 @@
   font-family: var(--main-font-family);
 }
 
+/* Tailwind base overrides */
 @layer base {
   body {
     font-family: var(--main-font-family);
@@ -41,20 +44,28 @@
 }
 
 /* Additional font classes */
-.font-amiri { font-family: 'Amiri', serif; }
-.font-kufi { font-family: 'Reem Kufi', sans-serif; }
-.font-lateef { font-family: 'Lateef', cursive; }
-.font-scheherazade { font-family: 'Scheherazade', serif; }
+.font-amiri {
+  font-family: 'Amiri', serif;
+}
+.font-kufi {
+  font-family: 'Reem Kufi', sans-serif;
+}
+.font-lateef {
+  font-family: 'Lateef', cursive;
+}
+.font-scheherazade {
+  font-family: 'Scheherazade', serif;
+}
+
+/* Animations */
 @keyframes slide-down {
   0% { transform: translateY(-20px); opacity: 0; }
   100% { transform: translateY(0); opacity: 1; }
 }
-
 @keyframes pop-in {
   0% { transform: scale(0.8); opacity: 0; }
   100% { transform: scale(1); opacity: 1; }
 }
-
 @keyframes wiggle {
   0%, 100% { transform: translateX(0); }
   25% { transform: translateX(-3px); }
@@ -64,11 +75,9 @@
 .animate-slide-down {
   animation: slide-down 0.3s ease-out;
 }
-
 .animate-pop-in {
   animation: pop-in 0.2s ease-out;
 }
-
 .animate-wiggle {
   animation: wiggle 0.6s ease-in-out infinite;
 }

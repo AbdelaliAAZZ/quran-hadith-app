@@ -4,6 +4,7 @@ import { FaArrowLeft, FaArrowRight } from 'react-icons/fa';
 import { WiSunrise, WiDaySunny, WiSunset, WiMoonAltFull } from 'react-icons/wi';
 
 // --- Local Hijri-Gregorian Conversion Functions ---
+
 // Convert Hijri date to Julian Day (using an Umm al-Qura–like formula)
 function hijriToJD(year, month, day) {
   return (
@@ -37,10 +38,9 @@ function hijriToGregorianLocal(year, month, day) {
   return jdToGregorian(jd);
 }
 
-// Generate Hijri calendar locally for a given Hijri year/month (assumes 30 days per month)
+// Generate Hijri calendar locally for a given Hijri year/month (up to 30 days per month)
 function generateCalendar(hYear, hMonth, hijriMonthNames) {
   const days = [];
-  // For simplicity, assuming 30 days per Hijri month (adjust if needed)
   for (let d = 1; d <= 30; d++) {
     const gDate = hijriToGregorianLocal(hYear, hMonth, d);
     const jsDate = new Date(gDate.year, gDate.month - 1, gDate.day);
@@ -58,11 +58,24 @@ function generateCalendar(hYear, hMonth, hijriMonthNames) {
   return days;
 }
 
+// Major Islamic events (day, month, label)
+const muslimEvents = [
+  { day: 1,  month: 1,  label: 'رأس السنة الهجرية' },
+  { day: 10, month: 1,  label: 'يوم عاشوراء' },
+  { day: 12, month: 3,  label: 'المولد النبوي' },
+  { day: 1,  month: 9,  label: 'بداية رمضان' },
+  { day: 27, month: 9,  label: 'ليلة القدر (محتملة)' },
+  { day: 1,  month: 10, label: 'عيد الفطر' },
+  { day: 8,  month: 12, label: 'يوم التروية' },
+  { day: 9,  month: 12, label: 'يوم عرفة' },
+  { day: 10, month: 12, label: 'عيد الأضحى' },
+];
+
 const HijriCalendar = () => {
   const { theme } = useTheme();
   const [today] = useState(new Date());
 
-  // Global States
+  // Location & Prayer Times
   const [userLocation, setUserLocation] = useState(null);
   const [locationError, setLocationError] = useState(null);
   const [countryName, setCountryName] = useState('');
@@ -71,14 +84,13 @@ const HijriCalendar = () => {
   const [prayerError, setPrayerError] = useState(null);
   const [showPrayerTimes, setShowPrayerTimes] = useState(false);
 
-  // Calendar States (Hijri-based)
+  // Hijri Calendar States
   const [selectedHijriMonth, setSelectedHijriMonth] = useState(1);
   const [selectedHijriYear, setSelectedHijriYear] = useState(1444);
   const [searchHijriMonth, setSearchHijriMonth] = useState(1);
   const [searchHijriYear, setSearchHijriYear] = useState(1444);
   const [calendarData, setCalendarData] = useState([]);
-  // Store today's Hijri date from the API for proper highlighting
-  const [currentHijriDate, setCurrentHijriDate] = useState(null);
+  const [currentHijriDate, setCurrentHijriDate] = useState(null); // today's Hijri date
 
   // Conversion Tool States
   const [showConversionTool, setShowConversionTool] = useState(false);
@@ -87,21 +99,27 @@ const HijriCalendar = () => {
   const [gregorianInput, setGregorianInput] = useState('');
   const [convertedToHijri, setConvertedToHijri] = useState(null);
 
+  // Event Navigation State
+  const [selectedEventIndex, setSelectedEventIndex] = useState(-1);
+
   // Memoized Hijri Month Names
-  const hijriMonthNames = useMemo(() => [
-    'محرم',
-    'صفر',
-    'ربيع الأول',
-    'ربيع الآخر',
-    'جمادى الأولى',
-    'جمادى الآخرة',
-    'رجب',
-    'شعبان',
-    'رمضان',
-    'شوال',
-    'ذو القعدة',
-    'ذو الحجة',
-  ], []);
+  const hijriMonthNames = useMemo(
+    () => [
+      'محرم',
+      'صفر',
+      'ربيع الأول',
+      'ربيع الآخر',
+      'جمادى الأولى',
+      'جمادى الآخرة',
+      'رجب',
+      'شعبان',
+      'رمضان',
+      'شوال',
+      'ذو القعدة',
+      'ذو الحجة',
+    ],
+    []
+  );
 
   const weekDays = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
 
@@ -115,7 +133,7 @@ const HijriCalendar = () => {
     Isha: <WiMoonAltFull className="text-3xl" />,
   };
 
-  // Fetch Country Name (Reverse Geocoding)
+  // ------------------- Location & Prayer Times -------------------
   const fetchCountryName = async (lat, lng) => {
     try {
       const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`;
@@ -128,7 +146,6 @@ const HijriCalendar = () => {
     }
   };
 
-  // Fetch Prayer Times using Aladhan API
   const fetchPrayerTimes = async (location) => {
     if (!location) return;
     setLoadingPrayer(true);
@@ -151,7 +168,6 @@ const HijriCalendar = () => {
     }
   };
 
-  // Activate location on demand with fallback if permission is denied
   const activateLocation = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -165,7 +181,6 @@ const HijriCalendar = () => {
         },
         (error) => {
           console.error('Location error:', error);
-          // Use fallback coordinates (e.g., Mecca) if permission is denied
           const fallback = { lat: 21.3891, lng: 39.8579 };
           setUserLocation(fallback);
           fetchPrayerTimes(fallback);
@@ -177,10 +192,12 @@ const HijriCalendar = () => {
     }
   };
 
-  // Set calendar to today's Hijri date using Aladhan conversion API and store currentHijriDate
+  // ------------------- Hijri "Today" from Aladhan -------------------
   const goToToday = async () => {
     const now = new Date();
-    const url = `https://api.aladhan.com/v1/gToH?date=${now.getDate()}-${now.getMonth() + 1}-${now.getFullYear()}&method=4`;
+    const url = `https://api.aladhan.com/v1/gToH?date=${now.getDate()}-${
+      now.getMonth() + 1
+    }-${now.getFullYear()}&method=4`;
     try {
       const res = await fetch(url);
       const data = await res.json();
@@ -200,10 +217,11 @@ const HijriCalendar = () => {
     }
   };
 
-  // On mount, get today's Hijri date (via Aladhan API) and store it
   useEffect(() => {
     const getHijriToday = async () => {
-      const url = `https://api.aladhan.com/v1/gToH?date=${today.getDate()}-${today.getMonth() + 1}-${today.getFullYear()}&method=4`;
+      const url = `https://api.aladhan.com/v1/gToH?date=${today.getDate()}-${
+        today.getMonth() + 1
+      }-${today.getFullYear()}&method=4`;
       try {
         const res = await fetch(url);
         const data = await res.json();
@@ -225,50 +243,52 @@ const HijriCalendar = () => {
     getHijriToday();
   }, [today]);
 
-  // Generate calendar locally whenever the selected Hijri month/year changes
   useEffect(() => {
     const calData = generateCalendar(selectedHijriYear, selectedHijriMonth, hijriMonthNames);
     setCalendarData(calData);
   }, [selectedHijriYear, selectedHijriMonth, hijriMonthNames]);
 
-  // Calendar Navigation
+  // ------------------- Calendar Navigation -------------------
   const goToPreviousHijriMonth = () => {
     if (selectedHijriMonth === 1) {
       setSelectedHijriMonth(12);
-      setSelectedHijriYear(prev => prev - 1);
+      setSelectedHijriYear((prev) => prev - 1);
       setSearchHijriMonth(12);
-      setSearchHijriYear(prev => prev - 1);
+      setSearchHijriYear((prev) => prev - 1);
     } else {
-      setSelectedHijriMonth(prev => prev - 1);
-      setSearchHijriMonth(prev => prev - 1);
+      setSelectedHijriMonth((prev) => prev - 1);
+      setSearchHijriMonth((prev) => prev - 1);
     }
+    setSelectedEventIndex(-1);
   };
 
   const goToNextHijriMonth = () => {
     if (selectedHijriMonth === 12) {
       setSelectedHijriMonth(1);
-      setSelectedHijriYear(prev => prev + 1);
+      setSelectedHijriYear((prev) => prev + 1);
       setSearchHijriMonth(1);
-      setSearchHijriYear(prev => prev + 1);
+      setSearchHijriYear((prev) => prev + 1);
     } else {
-      setSelectedHijriMonth(prev => prev + 1);
-      setSearchHijriMonth(prev => prev + 1);
+      setSelectedHijriMonth((prev) => prev + 1);
+      setSearchHijriMonth((prev) => prev + 1);
     }
+    setSelectedEventIndex(-1);
   };
 
   const handleSearch = () => {
     setSelectedHijriMonth(Number(searchHijriMonth));
     setSelectedHijriYear(Number(searchHijriYear));
+    setSelectedEventIndex(-1);
   };
 
-  // Conversion Tool Functions
+  // ------------------- Conversion Tool -------------------
   const handleConvertHijriToGregorian = () => {
     const { day, month, year } = hijriInput;
     if (!day || !month || !year) return;
     const gDate = hijriToGregorianLocal(Number(year), Number(month), Number(day));
     setConvertedToGregorian({
       date: `${gDate.day}-${gDate.month}-${gDate.year}`,
-      weekday: { en: '' }
+      weekday: { en: '' },
     });
   };
 
@@ -287,7 +307,42 @@ const HijriCalendar = () => {
     }
   };
 
-  // Calculate grid offset based on the first Gregorian date of the generated calendar
+  // ------------------- Event Navigation -------------------
+  const goToEventByIndex = (idx) => {
+    setSelectedEventIndex(idx);
+    const event = muslimEvents[idx];
+    setSelectedHijriMonth(event.month);
+    setSearchHijriMonth(event.month);
+  };
+
+  const goToPreviousEvent = () => {
+    if (selectedEventIndex === -1) {
+      goToEventByIndex(muslimEvents.length - 1);
+    } else {
+      const newIdx = (selectedEventIndex - 1 + muslimEvents.length) % muslimEvents.length;
+      goToEventByIndex(newIdx);
+    }
+  };
+
+  const goToNextEvent = () => {
+    if (selectedEventIndex === -1) {
+      goToEventByIndex(0);
+    } else {
+      const newIdx = (selectedEventIndex + 1) % muslimEvents.length;
+      goToEventByIndex(newIdx);
+    }
+  };
+
+  const handleSelectEvent = (e) => {
+    const idx = Number(e.target.value);
+    if (idx === -1) {
+      setSelectedEventIndex(-1);
+      return;
+    }
+    goToEventByIndex(idx);
+  };
+
+  // ------------------- Calendar Rendering -------------------
   let offset = 0;
   if (calendarData.length > 0) {
     const firstDay = calendarData[0].gregorian.jsDate;
@@ -298,10 +353,13 @@ const HijriCalendar = () => {
   return (
     <div
       dir="rtl"
-      className={`p-4 max-w-4xl mx-auto ${theme === 'dark' ? 'bg-gray-800 text-white' : 'bg-white text-black'}`}
+      className={`p-4 max-w-4xl mx-auto ${
+        theme === 'dark' ? 'bg-gray-800 text-white' : 'bg-white text-black'
+      }`}
     >
       {locationError && <div className="text-center text-red-500 my-4">{locationError}</div>}
 
+      {/* Header / Controls */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6">
         <div className="flex items-center justify-center">
           <h1 className="text-3xl font-bold mr-2">التقويم الهجري</h1>
@@ -326,12 +384,20 @@ const HijriCalendar = () => {
         </div>
       </div>
 
+      {/* Prayer Times */}
       {showPrayerTimes && (
-        <div className={`w-full max-w-md mx-auto p-4 rounded shadow-lg mb-6 ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-100'}`}>
+        <div
+          className={`w-full max-w-md mx-auto p-4 rounded shadow-lg mb-6 ${
+            theme === 'dark' ? 'bg-gray-700' : 'bg-gray-100'
+          }`}
+        >
           <h2 className="text-xl font-semibold mb-2 text-center">مواقيت الصلاة</h2>
           {!userLocation && (
             <div className="text-center my-4">
-              <button onClick={activateLocation} className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">
+              <button
+                onClick={activateLocation}
+                className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+              >
                 تفعيل الموقع
               </button>
             </div>
@@ -343,7 +409,10 @@ const HijriCalendar = () => {
           ) : prayerTimes ? (
             <div className="grid grid-cols-2 gap-4">
               {Object.entries(prayerTimes).map(([prayer, time]) => (
-                <div key={prayer} className="flex items-center justify-between p-3 bg-white dark:bg-gray-600 rounded shadow">
+                <div
+                  key={prayer}
+                  className="flex items-center justify-between p-3 bg-white dark:bg-gray-600 rounded shadow"
+                >
                   <div className="flex items-center gap-2">
                     {prayerIcons[prayer] || <WiDaySunny className="text-3xl" />}
                     <span className="font-semibold">{prayer}</span>
@@ -356,12 +425,14 @@ const HijriCalendar = () => {
         </div>
       )}
 
+      {/* Calendar Controls with Swapped Buttons */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-center gap-4 mb-6">
+        {/* Next Month Button is now on the left */}
         <button
-          onClick={goToPreviousHijriMonth}
+          onClick={goToNextHijriMonth}
           className="px-4 py-2 bg-gray-200 text-gray-800 dark:bg-gray-600 dark:text-white rounded hover:bg-gray-300 dark:hover:bg-gray-500"
         >
-          <FaArrowLeft /> السابق
+          <FaArrowRight /> التالي
         </button>
         <button
           onClick={goToToday}
@@ -395,19 +466,57 @@ const HijriCalendar = () => {
             بحث
           </button>
         </div>
+        {/* Previous Month Button is now on the right */}
         <button
-          onClick={goToNextHijriMonth}
+          onClick={goToPreviousHijriMonth}
           className="px-4 py-2 bg-gray-200 text-gray-800 dark:bg-gray-600 dark:text-white rounded hover:bg-gray-300 dark:hover:bg-gray-500"
         >
-          التالي <FaArrowRight />
+          السابق <FaArrowLeft />
         </button>
       </div>
 
+      {/* Islamic Events Navigation */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-center gap-4 mb-6">
+        <button
+          onClick={goToPreviousEvent}
+          className="px-4 py-2 bg-gray-200 text-gray-800 dark:bg-gray-600 dark:text-white rounded hover:bg-gray-300 dark:hover:bg-gray-500"
+        >
+          الحدث السابق
+        </button>
+        <div className="flex items-center gap-2">
+          <label htmlFor="eventSelect" className="font-semibold">
+            انتقل إلى حدث:
+          </label>
+          <select
+            id="eventSelect"
+            value={selectedEventIndex}
+            onChange={handleSelectEvent}
+            className="p-2 border bg-white text-black rounded dark:bg-gray-700 dark:text-white"
+          >
+            <option value={-1}>اختر حدثاً</option>
+            {muslimEvents.map((evt, idx) => (
+              <option key={idx} value={idx}>
+                {evt.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <button
+          onClick={goToNextEvent}
+          className="px-4 py-2 bg-gray-200 text-gray-800 dark:bg-gray-600 dark:text-white rounded hover:bg-gray-300 dark:hover:bg-gray-500"
+        >
+          الحدث التالي
+        </button>
+      </div>
+
+      {/* Calendar Grid */}
       {calendarData.length > 0 ? (
         <>
           <div className="grid grid-cols-7 text-center font-semibold border-b pb-2">
             {weekDays.map((day, idx) => (
-              <div key={idx} className="py-2">{day}</div>
+              <div key={idx} className="py-2">
+                {day}
+              </div>
             ))}
           </div>
           <div className="grid grid-cols-7 gap-1 mt-2">
@@ -417,12 +526,17 @@ const HijriCalendar = () => {
               } else {
                 const dayIndex = index - offset;
                 const dayData = calendarData[dayIndex];
-                // Highlight if this cell matches today's Hijri date
+                if (!dayData) return null;
                 const isToday =
                   currentHijriDate &&
                   dayData.hijri.day === currentHijriDate.day &&
                   dayData.hijri.month.number === currentHijriDate.month &&
                   dayData.hijri.year === currentHijriDate.year;
+                const dayEvent = muslimEvents.find(
+                  (evt) =>
+                    evt.day === dayData.hijri.day &&
+                    evt.month === dayData.hijri.month.number
+                );
                 return (
                   <div
                     key={index}
@@ -438,6 +552,11 @@ const HijriCalendar = () => {
                   >
                     <div className="text-xl font-bold text-center">{dayData.hijri.day}</div>
                     <div className="text-xs text-center">{dayData.hijri.month.ar}</div>
+                    {dayEvent && (
+                      <div className="text-xs mt-1 text-red-600 dark:text-red-300 text-center">
+                        {dayEvent.label}
+                      </div>
+                    )}
                   </div>
                 );
               }
@@ -448,6 +567,7 @@ const HijriCalendar = () => {
         <div className="text-center py-8">لا توجد بيانات للتقويم</div>
       )}
 
+      {/* Conversion Tool */}
       {showConversionTool && (
         <div className="mt-6 p-4 border rounded bg-gray-100 dark:bg-gray-800">
           <h2 className="text-2xl font-bold mb-4 text-center text-gray-800 dark:text-white">
@@ -498,7 +618,6 @@ const HijriCalendar = () => {
                 )}
               </div>
             </div>
-
             <div className="p-4 border rounded bg-white dark:bg-gray-700">
               <h3 className="text-xl font-semibold mb-2 text-center text-gray-800 dark:text-white">
                 من ميلادي إلى هجري

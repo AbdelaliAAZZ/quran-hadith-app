@@ -53,7 +53,7 @@ const Adkar = () => {
             className={`w-full p-3 rounded-lg ${
               theme === 'dark'
                 ? 'bg-gray-800 text-white border-gray-700'
-                : 'bg-white text-gray-800 border-gray-200'
+                : 'bg-white text-gray-800 border-gray-200' 
             } border focus:outline-none focus:ring-2 focus:ring-teal-500`}
           />
         </div>
