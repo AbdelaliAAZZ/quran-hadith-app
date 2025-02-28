@@ -81,8 +81,6 @@ function Navbar() {
     setShowReportIssue(false);
   };
 
-  // For desktop, show text-only links; for mobile, show icons with text.
-  // In mobile links, onClick closes the menu.
   return (
     <>
       <style>{`
@@ -149,7 +147,7 @@ function Navbar() {
                 <img src={logo} alt="Logo" className="h-10 w-auto" />
               </Link>
             </div>
-            {/* Desktop: text-only links */}
+            {/* Desktop Menu */}
             <div className="hidden md:flex items-center space-x-8">
               <Link to="/quran" className="nav-link text-teal-700 dark:text-teal-300 px-3 py-2 transition-all duration-300">
                 القرآن الكريم
@@ -164,25 +162,23 @@ function Navbar() {
                 التقويم
               </Link>
               <Link to="/adkar" className="nav-link text-teal-700 dark:text-teal-300 px-3 py-2 transition-all duration-300">
-  الأذكار
-</Link>
+                الأذكار
+              </Link>
               <Link to="/books" className="nav-link text-teal-700 dark:text-teal-300 px-3 py-2 transition-all duration-300">
                 الكتب
               </Link>
-              <button
-                onClick={() => setShowReportIssue(true)}
-                className="nav-link text-teal-700 dark:text-teal-300 px-3 py-2 transition-all duration-300"
-              >
+              {/* New link to Quran Image Generator */}
+              <Link to="/quran-image" className="nav-link text-teal-700 dark:text-teal-300 px-3 py-2 transition-all duration-300">
+                مولد الصورة القرآنية
+              </Link>
+              <button onClick={() => setShowReportIssue(true)} className="nav-link text-teal-700 dark:text-teal-300 px-3 py-2 transition-all duration-300">
                 الإبلاغ عن مشكلة
               </button>
-              <button
-                onClick={toggleTheme}
-                className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-transform duration-300"
-              >
+              <button onClick={toggleTheme} className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-transform duration-300">
                 {theme === 'dark' ? <FaSun /> : <FaMoon />}
               </button>
             </div>
-            {/* Mobile: full screen menu with icons */}
+            {/* Mobile Menu Toggle */}
             <div className="flex md:hidden items-center space-x-2">
               <button onClick={toggleTheme} className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 transition-transform duration-300">
                 {theme === 'dark' ? <FaSun /> : <FaMoon />}
@@ -230,17 +226,18 @@ function Navbar() {
                 <span className="text-lg text-teal-700">التقويم</span>
               </Link>
               <Link to="/adkar" onClick={() => setIsOpen(false)} className="flex items-center px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-  <GiPrayerBeads className="mr-3 text-teal-700 w-6 h-6" />
-  <span className="text-lg text-teal-700">الأذكار</span>
-</Link>
+                <GiPrayerBeads className="mr-3 text-teal-700 w-6 h-6" />
+                <span className="text-lg text-teal-700">الأذكار</span>
+              </Link>
               <Link to="/books" onClick={() => setIsOpen(false)} className="flex items-center px-4 py-3 border-b border-gray-200 dark:border-gray-700">
                 <FaBookOpen className="mr-3 text-teal-700" />
                 <span className="text-lg text-teal-700">الكتب</span>
               </Link>
-              <button
-                onClick={() => { setShowReportIssue(true); setIsOpen(false); }}
-                className="flex items-center px-4 py-3 border-b border-gray-200 dark:border-gray-700"
-              >
+              <Link to="/quran-image" onClick={() => setIsOpen(false)} className="flex items-center px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                <FaMosque className="mr-3 text-teal-700" />
+                <span className="text-lg text-teal-700">مولد الصورة القرآنية</span>
+              </Link>
+              <button onClick={() => { setShowReportIssue(true); setIsOpen(false); }} className="flex items-center px-4 py-3 border-b border-gray-200 dark:border-gray-700">
                 <FaExclamationTriangle className="mr-3 text-teal-700" />
                 <span className="text-lg text-teal-700">الإبلاغ عن مشكلة</span>
               </button>

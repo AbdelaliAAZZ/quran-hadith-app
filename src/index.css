@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Amiri&family=Reem+Kufi&family=Lateef&family=Scheherazade&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Amiri&family=Reem+Kufi&family=Lateef&family=Scheherazade&family=Cairo&family=Tajawal&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -16,7 +16,6 @@
   font-family: var(--main-font-family);
   font-size: var(--main-font-size);
 }
-
 .font-arabic {
   font-family: var(--main-font-family);
 }
@@ -43,7 +42,7 @@
   }
 }
 
-/* Additional font classes */
+/* Additional font classes (with Arabic names) */
 .font-amiri {
   font-family: 'Amiri', serif;
 }
@@ -55,6 +54,12 @@
 }
 .font-scheherazade {
   font-family: 'Scheherazade', serif;
+}
+.font-cairo {
+  font-family: 'Cairo', sans-serif;
+}
+.font-tajawal {
+  font-family: 'Tajawal', sans-serif;
 }
 
 /* Animations */

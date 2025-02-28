@@ -7,6 +7,7 @@ import Tasbih from './pages/Tasbih';
 import HijriCalendar from './pages/HijriCalendar';
 import Books from './pages/Books';
 import { useTheme } from './context/ThemeContext';
+import QuranImageGenerator from './pages/QuranImageGenerator';
 import Adkar from './pages/Adkar';
 
 function App() {
@@ -30,6 +31,7 @@ function App() {
           <Route path="/calendar" element={<HijriCalendar />} />
           <Route path="/books" element={<Books />} />
           <Route path="/adkar" element={<Adkar />}/>
+          <Route path="/quran-image" element={<QuranImageGenerator />} />
         </Routes>
       </main>
       <footer

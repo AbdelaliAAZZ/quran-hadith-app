@@ -17,7 +17,7 @@ import {
   FaVolumeUp,
   FaTimes,
   FaTachometerAlt,
-  FaBookmark,
+  FaHeart,
   FaArrowUp,
   FaCopy,
   FaInfoCircle,
@@ -26,7 +26,9 @@ import {
   FaTwitter,
   FaWhatsapp,
   FaSyncAlt,
-  FaStarAndCrescent
+  FaStarAndCrescent,
+  FaRegCalendarCheck,
+  FaBookOpen
 } from 'react-icons/fa';
 
 import PdfViewer from './PdfViewer';
@@ -34,39 +36,38 @@ import madinaIcon from '../assets/madina-img.ico';
 import makkahIcon from '../assets/makkah-img.ico';
 import book1Pdf from '../assets/book1.pdf';
 
-/**
+/** 
  * Pad surah/verse numbers to 3 digits for the everyayah folder structure.
- * e.g. 1 => '001', 23 => '023'
+ * Example: 1 => '001'; 23 => '023'
  */
 function padNumber(num) {
   return num.toString().padStart(3, '0');
 }
 
-/**
- * Build a verse-by-verse recitation URL from everyayah.com
+/** 
+ * Build a verse-by-verse recitation URL from everyayah.com 
+ * Example: https://everyayah.com/data/Alafasy_128kbps/001001.mp3
  */
 function buildAudioUrl(reciterId, surahNumber, verseNumber) {
   const surahStr = padNumber(surahNumber);
   const verseStr = padNumber(verseNumber);
-  // Example: https://everyayah.com/data/Alafasy_128kbps/001001.mp3
   return `https://everyayah.com/data/${reciterId}/${surahStr}${verseStr}.mp3`;
 }
 
-/**
- * Fetch tafsir from spa5k's GitHub-based API (in Arabic).
+/** 
+ * Fetch tafsir from spa5k's GitHub-based API (Arabic).
  * We'll use Ibn Kathir (ar-tafsir-ibn-kathir) as an example edition.
  */
 async function fetchTafsirSpa5k(surahNumber, verseNumber) {
   try {
     const base = 'https://cdn.jsdelivr.net/gh/spa5k/tafsir_api@main/tafsir';
-    const edition = 'ar-tafsir-ibn-kathir'; // or choose a different one
-    const url = `${base}/${edition}/${surahNumber}/${verseNumber}.json`; 
+    const edition = 'ar-tafsir-ibn-kathir'; // This could be changed to other editions if needed
+    const url = `${base}/${edition}/${surahNumber}/${verseNumber}.json`;
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error('Failed to fetch tafsir from spa5k');
     }
     const data = await response.json();
-    // spa5k data typically has { text: '...' }
     if (!data.text) {
       return 'لا يتوفر تفسير لهذه الآية.';
     }
@@ -77,23 +78,60 @@ async function fetchTafsirSpa5k(surahNumber, verseNumber) {
   }
 }
 
+/** 
+ * Simple function to detect if verse has Sajda data from Al-Quran Cloud
+ */
+function isSajda(ayah) {
+  if (!ayah.sajda) return false;
+  // The API sometimes returns an object with .recommended / .obligatory, or a boolean.
+  if (typeof ayah.sajda === 'object') {
+    return ayah.sajda.recommended || ayah.sajda.obligatory;
+  }
+  return !!ayah.sajda; 
+}
+
+/** 
+ * Example Tajweed parser for demonstration.
+ * You might replace it with real Tajweed logic or an external library.
+ */
+function applyTajweed(text = '') {
+  // Example: highlight madd letters (ا, و, ي) in red/bold:
+  return text.replace(
+    /([اوي])/g,
+    '<span style="color: #d9534f; font-weight: bold;">$1</span>'
+  );
+}
+
 function Quran() {
+  const { theme } = useTheme();
+
+  // ---------------- MAIN STATES ---------------
   const [surahs, setSurahs] = useState([]);
   const [selectedSurah, setSelectedSurah] = useState(null);
   const [verses, setVerses] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [reciter, setReciter] = useState('Alafasy_128kbps'); // Default reciter
   const [error, setError] = useState('');
-  const [playingAudio, setPlayingAudio] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [playingAudio, setPlayingAudio] = useState(null);
+  const [verseFilter, setVerseFilter] = useState('');
+
+  // Surah / Juz reading
+  const [readingOption, setReadingOption] = useState('surah');
+  const [selectedJuz, setSelectedJuz] = useState(1);
+
+  // Reading or listening mode
   const [readingMode, setReadingMode] = useState(false);
   const [listenMode, setListenMode] = useState(false);
-  const [verseFilter, setVerseFilter] = useState('');
+
+  // Reading display
   const [currentPage, setCurrentPage] = useState(1);
   const versesPerPage = 10;
   const [readingFontSize, setReadingFontSize] = useState(24);
   const [tempFontFamily, setTempFontFamily] = useState('Amiri');
   const [currentFontFamily, setCurrentFontFamily] = useState('Amiri');
+  const [isFullScreen, setIsFullScreen] = useState(false);
+
+  // Listen mode states
   const [isPlayingAll, setIsPlayingAll] = useState(false);
   const [currentPlayingIndex, setCurrentPlayingIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
@@ -103,26 +141,38 @@ function Quran() {
   const [playbackRate, setPlaybackRate] = useState(1);
   const [volume, setVolume] = useState(1);
   const [repeatMode, setRepeatMode] = useState(false);
-  const [readingOption, setReadingOption] = useState('surah');
-  const [selectedJuz, setSelectedJuz] = useState(1);
-  const [isFullScreen, setIsFullScreen] = useState(false);
-  const [copyMessage, setCopyMessage] = useState('');
+
+  // Reciter states
+  const [reciter, setReciter] = useState('Alafasy_128kbps');
+  const [chosenReader, setChosenReader] = useState('Alafasy_128kbps');
+
+  // Bookmarks (verse-based)
   const [bookmarks, setBookmarks] = useState([]);
+  // Bookmarks for reading mode (page-based)
+  const [readingBookmarks, setReadingBookmarks] = useState([]);
+
+  const [copyMessage, setCopyMessage] = useState('');
   const [activeTab, setActiveTab] = useState('quran');
   const [tafsirOpen, setTafsirOpen] = useState({});
   const [tafsirData, setTafsirData] = useState({});
   const [shareVerse, setShareVerse] = useState(null);
   const [shareType, setShareType] = useState('text');
-  const [chosenReader, setChosenReader] = useState('Alafasy_128kbps');
-  const [showAllQuran, setShowAllQuran] = useState(false);
 
-  const { theme } = useTheme();
+  // Tajweed
+  const [enableTajweed, setEnableTajweed] = useState(false);
 
+  // Sajda table
+  const [showSajdaTable, setShowSajdaTable] = useState(false);
+
+  // Khatam calculator
+  const [readingGoalDays, setReadingGoalDays] = useState('');
+  const [pagesPerDay, setPagesPerDay] = useState('');
+  const [versesPerDay, setVersesPerDay] = useState('');
+
+  // Refs
   const mainContentRef = useRef(null);
   const audioAllRef = useRef(null);
   const readingContainerRef = useRef(null);
-
-  // We'll keep references for each verse to allow scrolling (including Sajda).
   const verseRefs = useRef({});
 
   // Some known reciters on everyayah
@@ -132,15 +182,19 @@ function Quran() {
     { id: 'Minshawi_128kbps', name: 'محمد المنشاوي' }
   ];
 
-  // Load bookmarks from localStorage
+  // ---------------- LOAD from localStorage ---------------
   useEffect(() => {
     const storedFavs = localStorage.getItem('quranBookmarks');
     if (storedFavs) {
       setBookmarks(JSON.parse(storedFavs));
     }
+    const storedReadingBookmarks = localStorage.getItem('readingBookmarks');
+    if (storedReadingBookmarks) {
+      setReadingBookmarks(JSON.parse(storedReadingBookmarks));
+    }
   }, []);
 
-  // Fetch Surah list from alquran.cloud
+  // ---------------- FETCH Surahs from Al-Quran Cloud ---------------
   useEffect(() => {
     setError('');
     fetch('https://api.alquran.cloud/v1/surah')
@@ -173,7 +227,7 @@ function Quran() {
     surah.name.includes(searchQuery)
   );
 
-  // Build verses from alquran.cloud, then add audio from everyayah + reciter
+  // fetch verses from Al-Quran Cloud (by Surah)
   const fetchVerses = useCallback(
     async (surahNumber) => {
       setLoading(true);
@@ -201,7 +255,7 @@ function Quran() {
     [reciter]
   );
 
-  // If reading option is Juz
+  // fetch verses from Al-Quran Cloud (by Juz)
   const fetchJuz = useCallback(
     async (juzNumber) => {
       setLoading(true);
@@ -229,39 +283,35 @@ function Quran() {
     [reciter]
   );
 
-  // If user chooses Surah
+  // If user picks Surah
   useEffect(() => {
     if (readingOption === 'surah' && selectedSurah) {
       fetchVerses(selectedSurah.number);
     }
   }, [reciter, selectedSurah, readingOption, fetchVerses]);
 
-  // If user chooses Juz
+  // If user picks Juz
   useEffect(() => {
     if (readingOption === 'juz') {
       fetchJuz(selectedJuz);
     }
   }, [readingOption, selectedJuz, fetchJuz]);
 
-  // If reciter changes while a Surah is playing, we want to stop & replay with new reciter
-  // Also stop single verse audio if playing
+  // If reciter changes while Surah is playing
   useEffect(() => {
-    // Stop single verse audio if any
     if (playingAudio !== null) {
       setPlayingAudio(null);
     }
-    // If we are in the middle of playing the entire surah
     if (isPlayingAll) {
       stopPlayAll();
-      // Replay the entire surah with the newly selected reciter
       setTimeout(() => {
         playAllSurah();
       }, 100);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line
   }, [reciter]);
 
-  // Build refs for each verse (for Sajda or other scrolling)
+  // Build refs for each verse
   useEffect(() => {
     const refsObj = {};
     verses.forEach((v) => {
@@ -288,26 +338,30 @@ function Quran() {
     }
   };
 
-  // Scroll to a specific Sajda
+  // Scroll to Sajda
   const scrollToSajda = (verse) => {
     const key = `${verse.number}-${verse.numberInSurah}`;
     const ref = verseRefs.current[key];
     if (ref && ref.current) {
       ref.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
+    setShowSajdaTable(false);
   };
 
-  // Filter verses
+  // Filter verses by user input
   const filteredVersesData = verses.filter(
     (verse) =>
       verse.text.includes(verseFilter) ||
       verse.numberInSurah.toString().includes(verseFilter)
   );
 
-  // Pagination
+  // Pagination logic
   const totalPages = Math.ceil(filteredVersesData.length / versesPerPage);
   const paginatedVerses = readingMode
-    ? filteredVersesData.slice((currentPage - 1) * versesPerPage, currentPage * versesPerPage)
+    ? filteredVersesData.slice(
+        (currentPage - 1) * versesPerPage,
+        currentPage * versesPerPage
+      )
     : filteredVersesData;
 
   // Listen mode: play entire Surah
@@ -403,10 +457,13 @@ function Quran() {
 
   const skipBackward5 = () => {
     if (!audioAllRef.current) return;
-    audioAllRef.current.currentTime = Math.max(audioAllRef.current.currentTime - 5, 0);
+    audioAllRef.current.currentTime = Math.max(
+      audioAllRef.current.currentTime - 5,
+      0
+    );
   };
 
-  // Track audio
+  // track audio changes
   useEffect(() => {
     const audioEl = audioAllRef.current;
     if (!audioEl) return;
@@ -425,7 +482,7 @@ function Quran() {
     const handleEnded = () => {
       if (repeatMode) {
         audioEl.currentTime = 0;
-        audioEl.play().catch((err) => console.error('Audio play error:', err));
+        audioEl.play().catch((err) => console.error('Audio error:', err));
         return;
       }
       if (currentPlayingIndex < verses.length - 1 && isPlayingAll) {
@@ -448,7 +505,7 @@ function Quran() {
     };
   }, [currentPlayingIndex, verses, isPlayingAll, playbackRate, volume, repeatMode]);
 
-  // Toggle reading & listen modes
+  // Toggle reading & listening modes
   const toggleReadingMode = () => {
     setReadingMode((prev) => !prev);
     setListenMode(false);
@@ -456,23 +513,17 @@ function Quran() {
   };
 
   const toggleListenMode = () => {
-    if (readingOption === 'juz' && selectedJuz === 2) {
-      alert('وضع الاستماع غير متاح للجزء 2. سيتم نقلك إلى موقعك الحالي.');
-      if (mainContentRef.current) {
-        mainContentRef.current.scrollIntoView({ behavior: 'smooth' });
-      }
-      return;
-    }
-    setListenMode((prev) => !prev);
     setReadingMode(false);
     setIsPlayingAll(false);
+    setListenMode((prev) => !prev);
   };
 
+  // If verseFilter changes, go back to page 1
   useEffect(() => {
     setCurrentPage(1);
   }, [verseFilter, selectedSurah, readingOption]);
 
-  // Full screen
+  // Fullscreen
   const toggleFullScreen = () => {
     if (!document.fullscreenElement) {
       if (readingContainerRef.current) {
@@ -506,7 +557,7 @@ function Quran() {
     });
   };
 
-  // Fetch tafsir from spa5k
+  // Toggle tafsir
   const toggleTafsir = async (verseNumberInSurah, surahNumber) => {
     const key = `${surahNumber}-${verseNumberInSurah}`;
     setTafsirOpen((prev) => ({
@@ -522,7 +573,7 @@ function Quran() {
     }
   };
 
-  // Bookmark
+  // Verse-based bookmark
   const bookmarkVerse = (verse) => {
     const bookmarkKey = `${verse.number}-${verse.numberInSurah}`;
     const existing = bookmarks.find((b) => `${b.number}-${b.numberInSurah}` === bookmarkKey);
@@ -535,6 +586,7 @@ function Quran() {
     }
   };
 
+  // Remove from verse-based favorites
   const removeFavourite = (verse) => {
     const bookmarkKey = `${verse.number}-${verse.numberInSurah}`;
     const updated = bookmarks.filter(
@@ -542,6 +594,25 @@ function Quran() {
     );
     setBookmarks(updated);
     localStorage.setItem('quranBookmarks', JSON.stringify(updated));
+  };
+
+  // Page-based reading bookmarks
+  const addReadingBookmark = () => {
+    const alreadyExists = readingBookmarks.find((b) => b.page === currentPage);
+    if (!alreadyExists) {
+      const newMark = { page: currentPage, date: new Date().toISOString() };
+      const newList = [...readingBookmarks, newMark];
+      setReadingBookmarks(newList);
+      localStorage.setItem('readingBookmarks', JSON.stringify(newList));
+      setCopyMessage(`تم حفظ الصفحة ${currentPage}!`);
+      setTimeout(() => setCopyMessage(''), 2000);
+    }
+  };
+
+  const goToReadingBookmark = (page) => {
+    setCurrentPage(page);
+    setCopyMessage(`تم الانتقال إلى الصفحة ${page}`);
+    setTimeout(() => setCopyMessage(''), 2000);
   };
 
   // Share
@@ -579,21 +650,37 @@ function Quran() {
     setShareVerse(null);
   };
 
-  // Scroll to top
+  // Scroll to top (useful in reading mode)
   const scrollToTop = () => {
     if (readingContainerRef.current) {
       readingContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
-  // If user wants to see entire Quran PDF
+  // Show entire Quran PDF
+  const [showAllQuran, setShowAllQuran] = useState(false);
   if (showAllQuran) {
     return <PdfViewer file={book1Pdf} onClose={() => setShowAllQuran(false)} />;
   }
 
-  // Sajda verses
-  const sajdaVerses = verses.filter((v) => v.sajda);
+  // Identify Sajda verses
+  const sajdaVerses = verses.filter((v) => isSajda(v));
 
+  // Khatam calculator
+  const handleReadingPlan = () => {
+    if (readingGoalDays && readingGoalDays > 0) {
+      // Mushaf standard: 604 pages, 6236 verses
+      const ppd = Math.ceil(604 / readingGoalDays);
+      const vpd = Math.ceil(6236 / readingGoalDays);
+      setPagesPerDay(ppd);
+      setVersesPerDay(vpd);
+    } else {
+      setPagesPerDay('');
+      setVersesPerDay('');
+    }
+  };
+
+  // Render
   return (
     <div
       className={`min-h-screen p-4 md:p-8 bg-gradient-to-br ${
@@ -611,10 +698,11 @@ function Quran() {
             theme === 'dark' ? 'bg-opacity-90' : 'bg-opacity-80'
           }`}
         >
-          <div className="mb-4 flex justify-around">
+          {/* Tabs: Quran / Favorites */}
+          <div className="mb-4 flex flex-wrap justify-around gap-2">
             <button
               onClick={() => setActiveTab('quran')}
-              className={`px-4 py-2 rounded ${
+              className={`px-4 py-2 rounded flex items-center gap-2 ${
                 activeTab === 'quran'
                   ? 'bg-teal-600 text-white'
                   : theme === 'dark'
@@ -622,11 +710,12 @@ function Quran() {
                   : 'bg-teal-50 text-teal-800 hover:bg-teal-100'
               }`}
             >
+              <FaBookOpen />
               القرآن
             </button>
             <button
               onClick={() => setActiveTab('favourites')}
-              className={`px-4 py-2 rounded ${
+              className={`px-4 py-2 rounded flex items-center gap-2 ${
                 activeTab === 'favourites'
                   ? 'bg-teal-600 text-white'
                   : theme === 'dark'
@@ -634,8 +723,18 @@ function Quran() {
                   : 'bg-teal-50 text-teal-800 hover:bg-teal-100'
               }`}
             >
+              <FaHeart />
               المفضلة
             </button>
+            {activeTab === 'quran' && (
+              <button
+                onClick={() => setShowSajdaTable(true)}
+                className="px-4 py-2 rounded flex items-center gap-2 bg-teal-600 text-white hover:bg-teal-700"
+              >
+                <FaStarAndCrescent />
+                سجدات
+              </button>
+            )}
           </div>
 
           {activeTab === 'quran' && (
@@ -673,14 +772,16 @@ function Quran() {
               <div className="mt-4">
                 <button
                   onClick={() => setShowAllQuran(true)}
-                  className="w-full px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                  className="w-full px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center gap-2 justify-center"
                 >
-                  قراءة القرآن بالكامل
+                  <FaBook />
+                  قراءة القرآن بالكامل (PDF)
                 </button>
               </div>
             </div>
           )}
 
+          {/* If readingOption is surah, show surah list */}
           {activeTab === 'quran' && readingOption === 'surah' && (
             <>
               <h2
@@ -704,11 +805,11 @@ function Quran() {
               {error && (
                 <p className="text-red-500 dark:text-red-400 mb-4">{error}</p>
               )}
-              <ul className="max-h-[70vh] overflow-y-auto space-y-2 scrollbar-thin scrollbar-thumb-teal-200 scrollbar-track-transparent">
+              <ul className="max-h-[50vh] overflow-y-auto space-y-2 scrollbar-thin scrollbar-thumb-teal-200 scrollbar-track-transparent">
                 {filteredSurahs.map((surah) => (
                   <li key={`surah-${surah.number}`}>
                     <button
-                      className={`w-full text-left py-3 px-4 rounded-lg transition-all duration-200 ${
+                      className={`w-full text-left py-3 px-4 rounded-lg transition-all duration-200 flex items-center gap-2 ${
                         selectedSurah?.number === surah.number
                           ? 'bg-teal-600 text-white shadow-md'
                           : theme === 'dark'
@@ -717,7 +818,8 @@ function Quran() {
                       }`}
                       onClick={() => handleSurahClick(surah)}
                     >
-                      <span className="font-medium">{surah.number}.</span> {surah.name}
+                      <span className="font-medium">{surah.number}.</span>
+                      <span>{surah.name}</span>
                     </button>
                   </li>
                 ))}
@@ -734,38 +836,54 @@ function Quran() {
             </>
           )}
 
-          {/* Sajda direct navigation if any */}
-          {activeTab === 'quran' && sajdaVerses.length > 0 && (
-            <div className="mt-8">
-              <h3
-                className={`text-lg font-semibold mb-2 ${
-                  theme === 'dark' ? 'text-teal-200' : 'text-teal-800'
-                }`}
+          {/* Khatam Calculator */}
+          {activeTab === 'quran' && (
+            <div className="mt-8 p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
+              <div className="flex items-center gap-2 mb-3">
+                <FaRegCalendarCheck
+                  className={`text-2xl ${
+                    theme === 'dark' ? 'text-teal-300' : 'text-teal-600'
+                  }`}
+                />
+                <h3
+                  className={`text-lg font-bold ${
+                    theme === 'dark' ? 'text-teal-200' : 'text-teal-800'
+                  }`}
+                >
+                  حساب الختمة
+                </h3>
+              </div>
+              <label
+                htmlFor="reading-days"
+                className="block mb-1 text-sm text-gray-700 dark:text-gray-200"
               >
-                آيات السجدة:
-              </h3>
-              <ul className="space-y-2">
-                {sajdaVerses.map((verse) => (
-                  <li key={`sajda-${verse.number}-${verse.numberInSurah}`}>
-                    <button
-                      onClick={() => scrollToSajda(verse)}
-                      className={`block w-full text-left px-4 py-2 rounded ${
-                        theme === 'dark'
-                          ? 'bg-gray-700 text-gray-200 hover:bg-gray-600'
-                          : 'bg-gray-100 text-gray-700 hover:bg-teal-50'
-                      }`}
-                    >
-                      <FaStarAndCrescent className="inline-block mr-2 text-green-600" />
-                      سورة {verse.surah?.number} آية {verse.numberInSurah}
-                    </button>
-                  </li>
-                ))}
-              </ul>
+                عدد الأيام لختم القرآن:
+              </label>
+              <input
+                id="reading-days"
+                type="number"
+                value={readingGoalDays}
+                onChange={(e) => setReadingGoalDays(e.target.value)}
+                className="w-full p-2 mb-2 rounded border dark:bg-gray-600 dark:text-gray-100"
+              />
+              <button
+                onClick={handleReadingPlan}
+                className="flex items-center gap-2 px-3 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 transition-colors"
+              >
+                <FaSyncAlt />
+                احسب
+              </button>
+              {(pagesPerDay || versesPerDay) && (
+                <div className="mt-4 text-gray-800 dark:text-gray-100">
+                  <p>الصفحات يوميا: {pagesPerDay}</p>
+                  <p>الآيات يوميا: {versesPerDay}</p>
+                </div>
+              )}
             </div>
           )}
         </aside>
 
-        {/* MAIN CONTENT */}
+        {/* MAIN CONTENT: either Favourites tab or Quran tab */}
         {activeTab === 'favourites' ? (
           <section
             className={`md:col-span-2 ${
@@ -814,7 +932,7 @@ function Quran() {
                           >
                             الآية {verse.numberInSurah}
                           </span>
-                          {verse.sajda && (
+                          {isSajda(verse) && (
                             <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2 py-1 rounded text-sm">
                               <FaStarAndCrescent className="text-green-600" />
                               سجدة
@@ -845,7 +963,15 @@ function Quran() {
                           theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
                         } font-arabic font-selectable mb-2`}
                       >
-                        {verse.text}
+                        {enableTajweed ? (
+                          <span
+                            dangerouslySetInnerHTML={{
+                              __html: applyTajweed(verse.text)
+                            }}
+                          />
+                        ) : (
+                          verse.text
+                        )}
                       </p>
                       <div className="flex items-center gap-3 text-sm mt-1">
                         <button
@@ -979,7 +1105,7 @@ function Quran() {
                       </p>
                     </>
                   )}
-                  <div className="mt-4 flex justify-center gap-4">
+                  <div className="mt-4 flex flex-wrap justify-center gap-4">
                     <button
                       onClick={toggleReadingMode}
                       className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
@@ -993,231 +1119,283 @@ function Quran() {
                       <FaBook className="text-lg" />
                       {readingMode ? 'الخروج من وضع القراءة' : 'دخول وضع القراءة'}
                     </button>
-                    {!(readingOption === 'juz' && selectedJuz === 2) && (
-                      <button
-                        onClick={toggleListenMode}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-                          listenMode
-                            ? 'bg-teal-600 text-white'
-                            : theme === 'dark'
-                            ? 'bg-gray-700 text-teal-200 hover:bg-gray-600'
-                            : 'bg-teal-50 text-teal-800 hover:bg-teal-100'
-                        }`}
+                    <button
+                      onClick={toggleListenMode}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                        listenMode
+                          ? 'bg-teal-600 text-white'
+                          : theme === 'dark'
+                          ? 'bg-gray-700 text-teal-200 hover:bg-gray-600'
+                          : 'bg-teal-50 text-teal-800 hover:bg-teal-100'
+                      }`}
+                    >
+                      <FaHeadphones className="text-lg" />
+                      {listenMode ? 'الخروج من وضع الاستماع' : 'دخول وضع الاستماع'}
+                    </button>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={enableTajweed}
+                        onChange={(e) => setEnableTajweed(e.target.checked)}
+                        id="tajweed-toggle"
+                      />
+                      <label
+                        htmlFor="tajweed-toggle"
+                        className="text-sm text-teal-800 dark:text-teal-200"
                       >
-                        <FaHeadphones className="text-lg" />
-                        {listenMode ? 'الخروج من وضع الاستماع' : 'دخول وضع الاستماع'}
-                      </button>
-                    )}
+                        تجويد
+                      </label>
+                    </div>
                   </div>
                 </div>
 
+                {/* If listening mode, show that block. If reading mode, show that block. Otherwise normal. */}
                 {listenMode ? (
-                  <div className="text-center relative p-4 bg-gray-100 dark:bg-gray-700 rounded-lg shadow-lg">
-                    <h2
-                      className={`text-2xl font-bold mb-4 font-amiri ${
-                        theme === 'dark' ? 'text-teal-200' : 'text-teal-800'
-                      }`}
-                    >
-                      {readingOption === 'surah'
-                        ? selectedSurah && selectedSurah.name
-                        : `الجزء ${selectedJuz}`}
-                    </h2>
-                    <div className="mb-4 flex flex-col sm:flex-row justify-center items-center gap-4">
-                      {/* Reciter */}
-                      <div className="flex items-center gap-2">
-                        <FaHeadphones
-                          className={`text-xl ${
-                            theme === 'dark' ? 'text-teal-300' : 'text-teal-600'
-                          }`}
-                        />
-                        <label className="text-sm">القارئ:</label>
-                        <select
-                          value={reciter}
-                          onChange={(e) => setReciter(e.target.value)}
-                          className="p-2 rounded-lg border bg-white dark:bg-gray-600 text-gray-700 dark:text-gray-100"
-                        >
-                          {recitersList.map((r) => (
-                            <option key={`reciter-${r.id}`} value={r.id}>
-                              {r.name}
-                            </option>
-                          ))}
-                        </select>
+                  /* Listening mode block with skip, next surah, etc. */
+                  <>
+                    {/* Full listen mode code. We'll show the relevant UI so we keep references to skipForward5, etc. */}
+                    <div className="text-center relative p-4 bg-gray-100 dark:bg-gray-700 rounded-lg shadow-lg">
+                      <h2
+                        className={`text-2xl font-bold mb-4 font-amiri ${
+                          theme === 'dark' ? 'text-teal-200' : 'text-teal-800'
+                        }`}
+                      >
+                        {readingOption === 'surah'
+                          ? selectedSurah && selectedSurah.name
+                          : `الجزء ${selectedJuz}`}
+                      </h2>
+                      <div className="mb-4 flex flex-col sm:flex-row justify-center items-center gap-4">
+                        {/* Reciter */}
+                        <div className="flex items-center gap-2">
+                          <FaHeadphones
+                            className={`text-xl ${
+                              theme === 'dark' ? 'text-teal-300' : 'text-teal-600'
+                            }`}
+                          />
+                          <label className="text-sm">القارئ:</label>
+                          <select
+                            value={reciter}
+                            onChange={(e) => setReciter(e.target.value)}
+                            className="p-2 rounded-lg border bg-white dark:bg-gray-600 text-gray-700 dark:text-gray-100"
+                          >
+                            {recitersList.map((r) => (
+                              <option key={`reciter-${r.id}`} value={r.id}>
+                                {r.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        {/* Playback speed */}
+                        <div className="flex items-center gap-2">
+                          <FaTachometerAlt
+                            className={`text-xl ${
+                              theme === 'dark' ? 'text-teal-300' : 'text-teal-600'
+                            }`}
+                          />
+                          <label className="text-sm">سرعة الصوت:</label>
+                          <input
+                            type="range"
+                            min="0.25"
+                            max="2"
+                            step="0.25"
+                            value={playbackRate}
+                            onChange={(e) => setPlaybackRate(parseFloat(e.target.value))}
+                            className="accent-teal-500"
+                          />
+                          <span className="text-sm">{playbackRate}x</span>
+                        </div>
+                        {/* Volume */}
+                        <div className="flex items-center gap-2">
+                          <FaVolumeUp
+                            className={`text-xl ${
+                              theme === 'dark' ? 'text-teal-300' : 'text-teal-600'
+                            }`}
+                          />
+                          <label className="text-sm">الصوت:</label>
+                          <input
+                            type="range"
+                            min="0"
+                            max="1"
+                            step="0.05"
+                            value={volume}
+                            onChange={(e) => setVolume(parseFloat(e.target.value))}
+                            className="accent-teal-500"
+                          />
+                          <span className="text-sm">{Math.round(volume * 100)}%</span>
+                        </div>
+                        {/* Repeat mode */}
+                        <div className="flex items-center gap-2">
+                          <FaSyncAlt
+                            className={`text-xl ${
+                              theme === 'dark' ? 'text-teal-300' : 'text-teal-600'
+                            }`}
+                          />
+                          <button
+                            onClick={() => setRepeatMode((prev) => !prev)}
+                            className={`px-3 py-2 rounded ${
+                              repeatMode
+                                ? 'bg-red-600 text-white'
+                                : 'bg-white dark:bg-gray-600 text-gray-700 dark:text-gray-100'
+                            }`}
+                          >
+                            {repeatMode ? 'تكرار: مفعل' : 'تكرار'}
+                          </button>
+                        </div>
                       </div>
-                      {/* Playback speed */}
-                      <div className="flex items-center gap-2">
-                        <FaTachometerAlt
-                          className={`text-xl ${
-                            theme === 'dark' ? 'text-teal-300' : 'text-teal-600'
-                          }`}
-                        />
-                        <label className="text-sm">سرعة الصوت:</label>
-                        <input
-                          type="range"
-                          min="0.25"
-                          max="2"
-                          step="0.25"
-                          value={playbackRate}
-                          onChange={(e) => setPlaybackRate(parseFloat(e.target.value))}
-                          className="accent-teal-500"
-                        />
-                        <span className="text-sm">{playbackRate}x</span>
-                      </div>
-                      {/* Volume */}
-                      <div className="flex items-center gap-2">
-                        <FaVolumeUp
-                          className={`text-xl ${
-                            theme === 'dark' ? 'text-teal-300' : 'text-teal-600'
-                          }`}
-                        />
-                        <label className="text-sm">الصوت:</label>
-                        <input
-                          type="range"
-                          min="0"
-                          max="1"
-                          step="0.05"
-                          value={volume}
-                          onChange={(e) => setVolume(parseFloat(e.target.value))}
-                          className="accent-teal-500"
-                        />
-                        <span className="text-sm">{Math.round(volume * 100)}%</span>
-                      </div>
-                      {/* Repeat mode */}
-                      <div className="flex items-center gap-2">
-                        <FaSyncAlt
-                          className={`text-xl ${
-                            theme === 'dark' ? 'text-teal-300' : 'text-teal-600'
-                          }`}
-                        />
-                        <button
-                          onClick={() => setRepeatMode((prev) => !prev)}
-                          className={`px-3 py-2 rounded ${
-                            repeatMode
-                              ? 'bg-red-600 text-white'
-                              : 'bg-white dark:bg-gray-600 text-gray-700 dark:text-gray-100'
-                          }`}
-                        >
-                          {repeatMode ? 'تكرار: مفعل' : 'تكرار'}
-                        </button>
-                      </div>
-                    </div>
 
-                    {isPlayingAll ? (
-                      <div className="flex flex-col items-center gap-4">
-                        <div className="flex flex-col md:flex-row items-center gap-4 w-full max-w-2xl mx-auto p-4 bg-white dark:bg-gray-600 bg-opacity-90 rounded-lg shadow-md">
-                          <div className="flex gap-2">
-                            {readingOption === 'surah' && (
-                              <>
-                                <button
-                                  onClick={handlePreviousSurah}
-                                  disabled={selectedSurah && selectedSurah.number <= 1}
-                                  className="px-3 py-2 rounded bg-teal-600 hover:bg-teal-700 text-white disabled:opacity-50"
-                                >
-                                  <FaBackward />
-                                </button>
-                                <button
-                                  onClick={handleNextSurah}
-                                  disabled={isLastSurah}
-                                  className="px-3 py-2 rounded bg-teal-600 hover:bg-teal-700 text-white disabled:opacity-50"
-                                >
-                                  <FaForward />
-                                </button>
-                              </>
-                            )}
+                      {isPlayingAll ? (
+                        <div className="flex flex-col items-center gap-4">
+                          <div className="flex flex-col md:flex-row items-center gap-4 w-full max-w-2xl mx-auto p-4 bg-white dark:bg-gray-600 bg-opacity-90 rounded-lg shadow-md">
+                            <div className="flex gap-2">
+                              {readingOption === 'surah' && (
+                                <>
+                                  <button
+                                    onClick={handlePreviousSurah}
+                                    disabled={
+                                      selectedSurah && selectedSurah.number <= 1
+                                    }
+                                    className="px-3 py-2 rounded bg-teal-600 hover:bg-teal-700 text-white disabled:opacity-50"
+                                  >
+                                    <FaBackward />
+                                  </button>
+                                  <button
+                                    onClick={handleNextSurah}
+                                    disabled={isLastSurah}
+                                    className="px-3 py-2 rounded bg-teal-600 hover:bg-teal-700 text-white disabled:opacity-50"
+                                  >
+                                    <FaForward />
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={skipBackward5}
+                                className="px-3 py-2 rounded bg-teal-600 hover:bg-teal-700 text-white"
+                              >
+                                <FaUndoAlt />
+                              </button>
+                              <button
+                                onClick={togglePauseResume}
+                                className="px-3 py-2 rounded bg-teal-600 hover:bg-teal-700 text-white"
+                              >
+                                {isPaused ? <FaPlay /> : <FaPause />}
+                              </button>
+                              <button
+                                onClick={skipForward5}
+                                className="px-3 py-2 rounded bg-teal-600 hover:bg-teal-700 text-white"
+                              >
+                                <FaRedoAlt />
+                              </button>
+                              <button
+                                onClick={stopPlayAll}
+                                className="px-3 py-2 rounded bg-teal-600 hover:bg-teal-700 text-white"
+                              >
+                                <FaStop />
+                              </button>
+                            </div>
+                            <div className="flex-1 flex flex-col md:flex-row items-center gap-2">
+                              <span className="text-gray-700 dark:text-gray-100">
+                                الوقت المنقضي: {elapsedTime} دقيقة | المتبقي:{' '}
+                                {remainingTime} دقيقة
+                              </span>
+                              <input
+                                type="range"
+                                min="0"
+                                max="100"
+                                value={progress}
+                                onChange={handleProgressChange}
+                                className="flex-1 h-2 accent-teal-500"
+                              />
+                            </div>
+                            <div className="flex gap-2">
+                              <button className="px-3 py-2 rounded bg-teal-600 hover:bg-teal-700 text-white">
+                                <FaVolumeUp />
+                              </button>
+                              <button
+                                onClick={stopPlayAll}
+                                className="px-3 py-2 rounded bg-red-600 hover:bg-red-700 text-white"
+                              >
+                                <FaTimes />
+                              </button>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={skipBackward5}
-                              className="px-3 py-2 rounded bg-teal-600 hover:bg-teal-700 text-white"
-                            >
-                              <FaUndoAlt />
-                            </button>
-                            <button
-                              onClick={togglePauseResume}
-                              className="px-3 py-2 rounded bg-teal-600 hover:bg-teal-700 text-white"
-                            >
-                              {isPaused ? <FaPlay /> : <FaPause />}
-                            </button>
-                            <button
-                              onClick={skipForward5}
-                              className="px-3 py-2 rounded bg-teal-600 hover:bg-teal-700 text-white"
-                            >
-                              <FaRedoAlt />
-                            </button>
-                            <button
-                              onClick={stopPlayAll}
-                              className="px-3 py-2 rounded bg-teal-600 hover:bg-teal-700 text-white"
-                            >
-                              <FaStop />
-                            </button>
-                          </div>
-                          <div className="flex-1 flex flex-col md:flex-row items-center gap-2">
-                            <span className="text-gray-700 dark:text-gray-100">
-                              الوقت المنقضي: {elapsedTime} دقيقة | المتبقي: {remainingTime} دقيقة
-                            </span>
-                            <input
-                              type="range"
-                              min="0"
-                              max="100"
-                              value={progress}
-                              onChange={handleProgressChange}
-                              className="flex-1 h-2 accent-teal-500"
+
+                          <div className="mt-4 p-4 rounded-lg shadow-lg border bg-white dark:bg-gray-600 bg-opacity-90 w-full max-w-2xl mx-auto">
+                            <p
+                              className="text-center font-arabic font-selectable text-gray-800 dark:text-gray-100"
+                              style={{ fontSize: readingFontSize }}
+                              dangerouslySetInnerHTML={
+                                enableTajweed
+                                  ? {
+                                      __html:
+                                        applyTajweed(verses[currentPlayingIndex]?.text || '')
+                                    }
+                                  : { __html: verses[currentPlayingIndex]?.text || '' }
+                              }
                             />
                           </div>
-                          <div className="flex gap-2">
-                            <button className="px-3 py-2 rounded bg-teal-600 hover:bg-teal-700 text-white">
-                              <FaVolumeUp />
-                            </button>
-                            <button
-                              onClick={stopPlayAll}
-                              className="px-3 py-2 rounded bg-red-600 hover:bg-red-700 text-white"
-                            >
-                              <FaTimes />
-                            </button>
-                          </div>
-                        </div>
-
-                        <div className="mt-4 p-4 rounded-lg shadow-lg border bg-white dark:bg-gray-600 bg-opacity-90 w-full max-w-2xl mx-auto">
-                          <p
-                            className="text-center font-arabic font-selectable text-gray-800 dark:text-gray-100"
-                            style={{ fontSize: readingFontSize }}
-                          >
-                            {verses[currentPlayingIndex]?.text}
+                          <p className="mt-2 text-gray-600 dark:text-gray-200">
+                            الآية {currentPlayingIndex + 1} من {verses.length}
                           </p>
                         </div>
-                        <p className="mt-2 text-gray-600 dark:text-gray-200">
-                          الآية {currentPlayingIndex + 1} من {verses.length}
+                      ) : (
+                        <div className="flex flex-col items-center gap-4">
+                          <p className="text-gray-700 dark:text-gray-200 mb-2">
+                            اضغط على زر التشغيل للاستماع للسورة كاملة
+                          </p>
+                          <button
+                            onClick={playAllSurah}
+                            className="flex items-center justify-center gap-2 px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded-lg transition-colors"
+                          >
+                            <FaPlay className="text-lg" />
+                            تشغيل الكل
+                          </button>
+                        </div>
+                      )}
+                      <audio ref={audioAllRef} style={{ display: 'none' }} />
+                      {listenMode && (
+                        <p className="text-center text-gray-600 dark:text-gray-200 mt-2">
+                          الوقت المنقضي: {elapsedTime} دقيقة | المتبقي: {remainingTime} دقيقة
                         </p>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center gap-4">
-                        <p className="text-gray-700 dark:text-gray-200 mb-2">
-                          اضغط على زر التشغيل للاستماع للسورة كاملة
-                        </p>
-                        <button
-                          onClick={playAllSurah}
-                          className="flex items-center justify-center gap-2 px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded-lg transition-colors"
-                        >
-                          <FaPlay className="text-lg" />
-                          تشغيل الكل
-                        </button>
-                      </div>
-                    )}
-                    <audio ref={audioAllRef} style={{ display: 'none' }} />
-                    {listenMode && (
-                      <p className="text-center text-gray-600 dark:text-gray-200 mt-2">
-                        الوقت المنقضي: {elapsedTime} دقيقة | المتبقي: {remainingTime} دقيقة
-                      </p>
-                    )}
-                  </div>
+                      )}
+                    </div>
+                  </>
                 ) : readingMode ? (
+                  // Reading mode
                   <div
                     ref={readingContainerRef}
                     className={`relative ${
                       isFullScreen ? 'w-full h-screen p-8 overflow-auto' : ''
                     }`}
                   >
+                    {/* Show reading bookmarks at top */}
+                    <div className="mb-6">
+                      <button
+                        onClick={addReadingBookmark}
+                        className="flex items-center gap-2 px-3 py-2 bg-pink-600 text-white rounded hover:bg-pink-700 transition-colors mb-4"
+                      >
+                        <FaHeart />
+                        حفظ الصفحة الحالية ({currentPage})
+                      </button>
+                      {readingBookmarks.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-4">
+                          {readingBookmarks.map((bm) => (
+                            <button
+                              key={bm.page}
+                              onClick={() => goToReadingBookmark(bm.page)}
+                              className="px-3 py-1 bg-teal-300 text-teal-800 rounded hover:bg-teal-400 transition-colors text-sm"
+                            >
+                              صفحة {bm.page}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
                     <div className="flex flex-col sm:flex-row items-center justify-between mb-4">
                       <div className="flex items-center gap-4">
+                        {/* Decrease font */}
                         <button
                           onClick={() =>
                             setReadingFontSize((prev) => Math.max(prev - 2, 16))
@@ -1229,6 +1407,7 @@ function Quran() {
                         <span className="text-gray-700 dark:text-gray-200">
                           {readingFontSize}px
                         </span>
+                        {/* Increase font */}
                         <button
                           onClick={() => setReadingFontSize((prev) => prev + 2)}
                           className="p-2 bg-gray-200 dark:bg-gray-600 rounded-full hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
@@ -1295,7 +1474,7 @@ function Quran() {
                               ? 'border-teal-400'
                               : 'border-teal-500'
                           } rounded-full border-t-transparent`}
-                        ></div>
+                        />
                         <p
                           className={`mt-4 ${
                             theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
@@ -1323,11 +1502,19 @@ function Quran() {
                                   className="mb-4"
                                   ref={verseRefs.current[verseKey]}
                                 >
-                                  {verse.text}{' '}
+                                  {enableTajweed ? (
+                                    <span
+                                      dangerouslySetInnerHTML={{
+                                        __html: applyTajweed(verse.text)
+                                      }}
+                                    />
+                                  ) : (
+                                    verse.text
+                                  )}{' '}
                                   <span className="text-base text-gray-500">
                                     ﴾{verse.numberInSurah}﴿
                                   </span>
-                                  {verse.sajda && (
+                                  {isSajda(verse) && (
                                     <span className="inline-flex items-center ml-2 px-2 py-1 bg-green-200 text-green-700 rounded">
                                       <FaStarAndCrescent className="mr-1" />
                                       سجدة
@@ -1371,6 +1558,7 @@ function Quran() {
                     )}
                   </div>
                 ) : (
+                  // Normal listing (no reading, no listening)
                   <div className="space-y-8 max-h-[65vh] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-teal-200 scrollbar-track-transparent">
                     {loading ? (
                       <div className="text-center py-12">
@@ -1380,7 +1568,7 @@ function Quran() {
                               ? 'border-teal-400'
                               : 'border-teal-500'
                           } rounded-full border-t-transparent`}
-                        ></div>
+                        />
                         <p
                           className={`mt-4 ${
                             theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
@@ -1417,7 +1605,7 @@ function Quran() {
                                     >
                                       الآية {verse.numberInSurah}
                                     </span>
-                                    {verse.sajda && (
+                                    {isSajda(verse) && (
                                       <span className="inline-flex items-center bg-green-100 text-green-700 px-2 py-1 rounded text-sm">
                                         <FaStarAndCrescent className="mr-1" />
                                         سجدة
@@ -1445,10 +1633,20 @@ function Quran() {
                                 </div>
                                 <p
                                   className={`text-right text-4xl leading-loose ${
-                                    theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+                                    theme === 'dark'
+                                      ? 'text-gray-200'
+                                      : 'text-gray-800'
                                   } font-arabic font-selectable mb-2`}
                                 >
-                                  {verse.text}
+                                  {enableTajweed ? (
+                                    <span
+                                      dangerouslySetInnerHTML={{
+                                        __html: applyTajweed(verse.text)
+                                      }}
+                                    />
+                                  ) : (
+                                    verse.text
+                                  )}
                                 </p>
                                 <div className="flex items-center gap-3 text-sm mt-1">
                                   <button
@@ -1469,7 +1667,7 @@ function Quran() {
                                     onClick={() => bookmarkVerse(verse)}
                                     className="flex items-center gap-1 px-2 py-1 bg-yellow-200 hover:bg-yellow-300 text-yellow-800 rounded"
                                   >
-                                    <FaBookmark />
+                                    <FaHeart />
                                     مفضلة
                                   </button>
                                   <button
@@ -1525,27 +1723,92 @@ function Quran() {
                   theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
                 }`}
               >
-                <svg
-                  className="w-16 h-16 mx-auto mb-4 text-teal-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                  />
-                </svg>
-                اختر سورة للبدء
+                <p>اختر سورة للبدء</p>
               </div>
             )}
           </section>
         )}
       </div>
 
-      {/* Scroll-to-top button for Reading Mode on mobile */}
+      {/* Sajda Table Modal */}
+      {showSajdaTable && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div
+            className={`bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-3xl ${
+              theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold font-amiri">آيات السجدة</h2>
+              <button
+                onClick={() => setShowSajdaTable(false)}
+                className="text-red-500 hover:text-red-600"
+              >
+                <FaTimes size={20} />
+              </button>
+            </div>
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr
+                  className={`${
+                    theme === 'dark'
+                      ? 'bg-gray-700 text-gray-100'
+                      : 'bg-gray-200 text-gray-700'
+                  }`}
+                >
+                  <th className="py-2 px-4 border-b">#</th>
+                  <th className="py-2 px-4 border-b">السورة</th>
+                  <th className="py-2 px-4 border-b">الآية</th>
+                  <th className="py-2 px-4 border-b">اذهب</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sajdaVerses.length > 0 ? (
+                  sajdaVerses.map((verse, idx) => {
+                    const key = `${verse.number}-${verse.numberInSurah}`;
+                    return (
+                      <tr
+                        key={key}
+                        className={`cursor-pointer hover:${
+                          theme === 'dark' ? 'bg-gray-600' : 'bg-gray-100'
+                        }`}
+                      >
+                        <td className="py-2 px-4 border-b text-center">{idx + 1}</td>
+                        <td className="py-2 px-4 border-b text-center">
+                          {verse.surah?.name || 'سورة'}
+                        </td>
+                        <td className="py-2 px-4 border-b text-center">
+                          {verse.numberInSurah}
+                        </td>
+                        <td className="py-2 px-4 border-b text-center">
+                          <button
+                            onClick={() => scrollToSajda(verse)}
+                            className={`px-3 py-1 rounded text-white ${
+                              theme === 'dark'
+                                ? 'bg-teal-600 hover:bg-teal-700'
+                                : 'bg-teal-600 hover:bg-teal-700'
+                            }`}
+                          >
+                            عرض
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan={4} className="text-center py-4">
+                      لا توجد آيات سجدة في هذه السورة/الجزء.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Scroll-to-top button (Reading Mode on mobile) */}
       {readingMode && (
         <button
           onClick={scrollToTop}
@@ -1558,8 +1821,18 @@ function Quran() {
 
       {/* Share Modal */}
       {shareVerse && activeTab !== 'favourites' && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg w-96">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div
+            className={`bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-md ${
+              theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+            } relative`}
+          >
+            <button
+              onClick={() => setShareVerse(null)}
+              className="absolute top-4 right-4 text-red-500 hover:text-red-600"
+            >
+              <FaTimes />
+            </button>
             <h2 className="text-xl font-bold mb-4 text-center font-amiri">
               مشاركة الآية
             </h2>
@@ -1568,7 +1841,9 @@ function Quran() {
               <button
                 onClick={() => setShareType('text')}
                 className={`px-4 py-2 rounded ${
-                  shareType === 'text' ? 'bg-teal-600 text-white' : 'bg-gray-300'
+                  shareType === 'text'
+                    ? 'bg-teal-600 text-white'
+                    : 'bg-gray-300 dark:bg-gray-700 dark:text-gray-200'
                 }`}
               >
                 مشاركة نص
@@ -1576,7 +1851,9 @@ function Quran() {
               <button
                 onClick={() => setShareType('audio')}
                 className={`px-4 py-2 rounded ${
-                  shareType === 'audio' ? 'bg-teal-600 text-white' : 'bg-gray-300'
+                  shareType === 'audio'
+                    ? 'bg-teal-600 text-white'
+                    : 'bg-gray-300 dark:bg-gray-700 dark:text-gray-200'
                 }`}
               >
                 مشاركة صوت
@@ -1588,7 +1865,7 @@ function Quran() {
                 <select
                   value={chosenReader}
                   onChange={(e) => setChosenReader(e.target.value)}
-                  className="w-full p-2 rounded border"
+                  className="w-full p-2 rounded border dark:bg-gray-700 dark:text-gray-200"
                 >
                   {recitersList.map((r) => (
                     <option key={`share-reciter-${r.id}`} value={r.id}>
@@ -1601,36 +1878,33 @@ function Quran() {
             <div className="flex justify-around">
               <button
                 onClick={() => handleShare('facebook')}
-                className="px-3 py-2 bg-blue-600 text-white rounded"
+                className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors flex items-center gap-2"
               >
-                <FaFacebook /> فيسبوك
+                <FaFacebook />
+                فيسبوك
               </button>
               <button
                 onClick={() => handleShare('twitter')}
-                className="px-3 py-2 bg-blue-400 text-white rounded"
+                className="px-3 py-2 bg-blue-400 text-white rounded hover:bg-blue-500 transition-colors flex items-center gap-2"
               >
-                <FaTwitter /> تويتر
+                <FaTwitter />
+                تويتر
               </button>
               <button
                 onClick={() => handleShare('whatsapp')}
-                className="px-3 py-2 bg-green-500 text-white rounded"
+                className="px-3 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors flex items-center gap-2"
               >
-                <FaWhatsapp /> واتساب
+                <FaWhatsapp />
+                واتساب
               </button>
             </div>
-            <button
-              onClick={() => setShareVerse(null)}
-              className="mt-4 block mx-auto px-3 py-2 bg-gray-300 dark:bg-gray-600 rounded"
-            >
-              إغلاق
-            </button>
           </div>
         </div>
       )}
 
       {/* Feedback Toast */}
       {copyMessage && (
-        <div className="fixed bottom-4 right-4 bg-teal-600 text-white py-2 px-4 rounded shadow-lg transition-all">
+        <div className="fixed bottom-4 right-4 bg-teal-600 text-white py-2 px-4 rounded shadow-lg transition-all z-50">
           {copyMessage}
         </div>
       )}
