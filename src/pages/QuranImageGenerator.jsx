@@ -4,7 +4,8 @@ import {
   FaDownload,
   FaMagic,
   FaQuestionCircle,
-  FaTimes
+  FaTimes,
+  FaEdit
 } from "react-icons/fa";
 
 /**
@@ -135,16 +136,15 @@ export default function QuranImageGenerator() {
       const found = ayahs.find((a) => a.numberInSurah === numInSurah);
       if (!found) return "";
       const sajdaIcon = found.sajda ? " 🕋" : "";
-      // e.g. (2) text
       return `(${found.numberInSurah}) ${found.text}${sajdaIcon}`;
     });
     setDisplayText(lines.join("\n"));
   }, [selectedAyahs, ayahs]);
 
   // ===========================
-  // Mouse / Drag / Resize
+  // Pointer (Drag / Resize) Events
   // ===========================
-  const handleMouseMove = useCallback(
+  const handlePointerMove = useCallback(
     (e) => {
       if (!previewRef.current) return;
       if (dragging) {
@@ -152,7 +152,6 @@ export default function QuranImageGenerator() {
         const previewRect = previewRef.current.getBoundingClientRect();
         let newX = e.clientX - previewRect.left - dragOffset.x;
         let newY = e.clientY - previewRect.top - dragOffset.y;
-        // clamp
         newX = Math.max(0, Math.min(newX, previewRect.width - boxWidth));
         newY = Math.max(0, Math.min(newY, previewRect.height - boxHeight));
         setBoxX(newX);
@@ -163,35 +162,33 @@ export default function QuranImageGenerator() {
         const newW = e.clientX - previewRect.left - boxX - resizeOffset.w;
         const newH = e.clientY - previewRect.top - boxY - resizeOffset.h;
         const minDim = 40;
-        const clampW = Math.max(minDim, Math.min(newW, previewRect.width - boxX));
-        const clampH = Math.max(minDim, Math.min(newH, previewRect.height - boxY));
-        setBoxWidth(clampW);
-        setBoxHeight(clampH);
+        setBoxWidth(Math.max(minDim, Math.min(newW, previewRect.width - boxX)));
+        setBoxHeight(Math.max(minDim, Math.min(newH, previewRect.height - boxY)));
       }
     },
     [dragging, resizing, dragOffset, boxWidth, boxHeight, boxX, boxY, resizeOffset]
   );
 
-  const handleMouseUp = useCallback(() => {
+  const handlePointerUp = useCallback(() => {
     setDragging(false);
     setResizing(false);
   }, []);
 
   useEffect(() => {
     if (dragging || resizing) {
-      window.addEventListener("mousemove", handleMouseMove);
-      window.addEventListener("mouseup", handleMouseUp);
+      window.addEventListener("pointermove", handlePointerMove);
+      window.addEventListener("pointerup", handlePointerUp);
     } else {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
     }
     return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
     };
-  }, [dragging, resizing, handleMouseMove, handleMouseUp]);
+  }, [dragging, resizing, handlePointerMove, handlePointerUp]);
 
-  const handleBoxMouseDown = (e) => {
+  const handleBoxPointerDown = (e) => {
     if (isEditingText) return;
     setDragging(true);
     const rect = e.currentTarget.getBoundingClientRect();
@@ -201,7 +198,7 @@ export default function QuranImageGenerator() {
     });
   };
 
-  const handleResizeMouseDown = (e) => {
+  const handleResizePointerDown = (e) => {
     e.stopPropagation();
     setResizing(true);
     setResizeOffset({
@@ -210,9 +207,6 @@ export default function QuranImageGenerator() {
     });
   };
 
-  const handleDoubleClick = () => {
-    setIsEditingText(true);
-  };
   const handleTextChange = (e) => {
     setDisplayText(e.target.value);
   };
@@ -225,7 +219,6 @@ export default function QuranImageGenerator() {
   // ===========================
   let textShadowCSS = "none";
   if (textEffect === "outline") {
-    // approximate outline around text with multiple shadows
     textShadowCSS = `
       1px 0 0 ${shadowColor},
       -1px 0 0 ${shadowColor},
@@ -237,7 +230,7 @@ export default function QuranImageGenerator() {
   }
 
   // ===========================
-  // aspect ratio
+  // aspect ratio and container style
   // ===========================
   let previewW = 400;
   if (aspectRatio === "16:9") {
@@ -247,15 +240,14 @@ export default function QuranImageGenerator() {
   } else if (aspectRatio === "4:5") {
     previewW = 400;
   }
-  // We'll let the preview container shrink on mobile by using maxWidth
   const containerStyle = {
     width: "100%",
     maxWidth: previewW,
-    aspectRatio: aspectRatio.replace(":", "/"), // for modern browsers
+    aspectRatio: aspectRatio.replace(":", "/")
   };
 
   // ===========================
-  // Download
+  // Download function
   // ===========================
   const handleDownload = () => {
     if (!previewRef.current || !canvasRef.current) return;
@@ -263,11 +255,9 @@ export default function QuranImageGenerator() {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
 
-    // match the current displayed size
     canvas.width = previewRect.width;
     canvas.height = previewRect.height;
 
-    // background
     if (bgOption === "solid") {
       ctx.fillStyle = bgColor;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -326,7 +316,7 @@ export default function QuranImageGenerator() {
     let yPos = padding;
 
     for (let ln of lines) {
-      const xPos = boxWidth - padding; // because textAlign=right
+      const xPos = boxWidth - padding;
       if (textEffect === "outline") {
         ctx.strokeText(ln, xPos, yPos);
       }
@@ -369,7 +359,7 @@ export default function QuranImageGenerator() {
   };
 
   // ===========================
-  // usage modal
+  // Usage Modal Controls
   // ===========================
   const openUsageModal = () => setShowUsageModal(true);
   const closeUsageModal = () => setShowUsageModal(false);
@@ -397,14 +387,19 @@ export default function QuranImageGenerator() {
             <h3 className="text-xl font-bold mb-4">دليل الاستخدام</h3>
             <ol className="list-decimal list-inside space-y-1">
               <li>اختر السورة من القائمة المنسدلة.</li>
-              <li>اختر الآيات المراد تضمينها بالضغط مع <b>Ctrl</b> أو <b>Shift</b> لتحديد آيات متعددة.</li>
-              <li>يمكنك سحب مربّع النص وتغيير حجمه بالنقر على الزاوية السفلية اليمنى.</li>
-              <li>انقر مرتين (Double click) على مربّع النص لتعديل نصّه يدويًا.</li>
+              <li>
+                اختر الآيات المراد تضمينها بالضغط مع <b>Ctrl</b> أو{" "}
+                <b>Shift</b> لتحديد آيات متعددة.
+              </li>
+              <li>يمكنك سحب مربع النص وتغيير حجمه بالنقر على الزاوية السفلية اليمنى.</li>
+              <li>
+                انقر مرتين (Double click) أو اضغط على أيقونة التعديل داخل المربع لتعديل النص يدويًا.
+              </li>
               <li>خصص الخط والتأثيرات والخلفية ونسبة العرض/الارتفاع.</li>
               <li>اضغط على زر <b>تحميل الصورة</b> لحفظها على جهازك.</li>
             </ol>
             <p className="mt-2 text-sm">
-              على الأجهزة المحمولة، قد تحتاج إلى الضغط مطولاً قبل السحب.
+              على الأجهزة المحمولة، قد تحتاج إلى الضغط مطولاً أو استخدام أيقونة التعديل.
             </p>
           </div>
         </div>
@@ -594,9 +589,7 @@ export default function QuranImageGenerator() {
             </div>
             {bgOption === "solid" && (
               <div>
-                <label className="block mb-1 font-semibold">
-                  اختر اللون:
-                </label>
+                <label className="block mb-1 font-semibold">اختر اللون:</label>
                 <input
                   type="color"
                   className="w-full p-2 border rounded"
@@ -608,9 +601,7 @@ export default function QuranImageGenerator() {
             {bgOption === "gradient" && (
               <>
                 <div>
-                  <label className="block mb-1 font-semibold">
-                    بداية التدرج:
-                  </label>
+                  <label className="block mb-1 font-semibold">بداية التدرج:</label>
                   <input
                     type="color"
                     className="w-full p-2 border rounded"
@@ -619,9 +610,7 @@ export default function QuranImageGenerator() {
                   />
                 </div>
                 <div>
-                  <label className="block mb-1 font-semibold">
-                    نهاية التدرج:
-                  </label>
+                  <label className="block mb-1 font-semibold">نهاية التدرج:</label>
                   <input
                     type="color"
                     className="w-full p-2 border rounded"
@@ -636,9 +625,7 @@ export default function QuranImageGenerator() {
           {/* Download + Ratio */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
-              <label className="block mb-1 font-semibold">
-                صيغة التنزيل:
-              </label>
+              <label className="block mb-1 font-semibold">صيغة التنزيل:</label>
               <select
                 className={`w-full p-2 border rounded ${
                   theme === "dark" ? "bg-gray-700" : "bg-white"
@@ -693,7 +680,7 @@ export default function QuranImageGenerator() {
           <h3 className="text-xl font-bold mb-2">معاينة الصورة:</h3>
           <div
             ref={previewRef}
-            className="mx-auto border border-gray-400 relative"
+            className="mx-auto border border-gray-400 relative rounded-lg shadow-md overflow-hidden"
             style={containerStyle}
           >
             <div
@@ -703,20 +690,19 @@ export default function QuranImageGenerator() {
                   bgOption === "solid"
                     ? bgColor
                     : `linear-gradient(135deg, ${gradStart}, ${gradEnd})`,
-                position: "relative",
+                position: "relative"
               }}
             >
               <div
-                className="absolute bg-white bg-opacity-10 border border-blue-400"
+                className="absolute bg-white bg-opacity-10 border border-blue-400 rounded p-2"
                 style={{
                   top: boxY,
                   left: boxX,
                   width: boxWidth,
                   height: boxHeight,
-                  cursor: isEditingText ? "text" : "move",
+                  cursor: isEditingText ? "text" : "move"
                 }}
-                onMouseDown={handleBoxMouseDown}
-                onDoubleClick={handleDoubleClick}
+                onPointerDown={handleBoxPointerDown}
               >
                 {isEditingText ? (
                   <textarea
@@ -726,7 +712,7 @@ export default function QuranImageGenerator() {
                       fontFamily: selectedFont,
                       fontSize: `${fontSize}px`,
                       direction: "rtl",
-                      textAlign: "right",
+                      textAlign: "right"
                     }}
                     value={displayText}
                     onChange={handleTextChange}
@@ -741,16 +727,26 @@ export default function QuranImageGenerator() {
                       color: fontColor,
                       direction: "rtl",
                       textAlign: "right",
-                      textShadow: textShadowCSS,
+                      textShadow: textShadowCSS
                     }}
                   >
                     {displayText}
+                    {/* Edit icon for mobile / touch users */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsEditingText(true);
+                      }}
+                      className="absolute top-1 right-1 text-blue-500 hover:text-blue-700"
+                    >
+                      <FaEdit size={16} />
+                    </button>
                   </div>
                 )}
-                {/* resize handle */}
+                {/* Resize handle */}
                 <div
-                  className="absolute bg-blue-500 w-4 h-4 bottom-0 right-0 cursor-se-resize"
-                  onMouseDown={handleResizeMouseDown}
+                  className="absolute bg-blue-500 rounded w-6 h-6 bottom-0 right-0 cursor-se-resize"
+                  onPointerDown={handleResizePointerDown}
                 />
               </div>
             </div>
