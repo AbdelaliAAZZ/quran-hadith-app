@@ -121,14 +121,12 @@ function Tasbih() {
 
   // Function to play the corresponding MP3 file, stopping any previously playing audio
   const speakDhikr = (label) => {
-    // Stop previous audio if playing
     if (currentAudio) {
       currentAudio.pause();
       currentAudio.currentTime = 0;
     }
     const audioFile = audioMap[label];
     if (audioFile) {
-      // For module compatibility, check if the imported file has a default property
       const audioSrc = audioFile.default ? audioFile.default : audioFile;
       const audio = new Audio(audioSrc);
       audio.play().catch(err => console.error('Audio playback error:', err));
@@ -193,12 +191,11 @@ function Tasbih() {
     setCurrentIndex(prev => (prev + 1) % dhikrList.length);
   };
 
-  const progressPercentage = Math.min(
-    (currentDhikr.count / currentDhikr.target) * 100 || 0,
-    100
-  );
+  // Safely calculate progressPercentage (only when target > 0)
+  const progressPercentage = currentDhikr.target > 0 
+    ? Math.min((currentDhikr.count / currentDhikr.target) * 100, 100) 
+    : 0;
 
-  // Check if the dhikr label is "long" for layout adjustment
   const isLongDhikr = currentDhikr.label.length > 20;
 
   return (
@@ -294,9 +291,7 @@ function Tasbih() {
                     className="stroke-current text-gray-500"
                     strokeWidth="4"
                     fill="transparent"
-                    strokeDasharray={`${(2 * Math.PI * 45) * (progressPercentage / 100)} ${
-                      2 * Math.PI * 45
-                    }`}
+                    strokeDasharray={`${(2 * Math.PI * 45) * (progressPercentage / 100)} ${2 * Math.PI * 45}`}
                     strokeLinecap="round"
                   />
                 </svg>
@@ -310,67 +305,63 @@ function Tasbih() {
               </div>
             </div>
 
-            {/* Target Adjust / Undo / Reset */}
-            {currentDhikr.target > 0 && (
-              <div className="w-full space-y-6">
-                {/* Label + (Minus, Input, Plus) on same line, same height */}
-                <div className="flex flex-col items-center space-y-2">
-                  <span className="text-sm text-gray-600 dark:text-gray-300">الهدف</span>
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => handleTargetChange(currentDhikr.id, currentDhikr.target - 1)}
-                      className="w-12 h-12 flex items-center justify-center text-xl rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
-                    >
-                      −
-                    </button>
-                    <input
-                      type="number"
-                      value={currentDhikr.target}
-                      onChange={(e) =>
-                        handleTargetChange(
-                          currentDhikr.id,
-                          parseInt(e.target.value) || 0
-                        )
-                      }
-                      className="w-20 h-12 px-3 text-center border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800 text-2xl text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    <button
-                      onClick={() => handleTargetChange(currentDhikr.id, currentDhikr.target + 1)}
-                      className="w-12 h-12 flex items-center justify-center text-xl rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-
-                {/* Undo / Reset Single / Reset All */}
-                <div className="flex justify-center gap-4">
+            {/* Always render target adjust and control buttons */}
+            <div className="w-full space-y-6">
+              <div className="flex flex-col items-center space-y-2">
+                <span className="text-sm text-gray-600 dark:text-gray-300">الهدف</span>
+                <div className="flex items-center space-x-2">
                   <button
-                    onClick={() => handleUndo(currentDhikr.id)}
-                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
+                    onClick={() => handleTargetChange(currentDhikr.id, currentDhikr.target - 1)}
+                    className="w-12 h-12 flex items-center justify-center text-xl rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
                   >
-                    <MdUndo className="w-5 h-5" />
-                    <span>تراجع</span>
+                    −
                   </button>
-
+                  <input
+                    type="number"
+                    value={currentDhikr.target}
+                    onChange={(e) =>
+                      handleTargetChange(
+                        currentDhikr.id,
+                        parseInt(e.target.value) || 0
+                      )
+                    }
+                    className="w-20 h-12 px-3 text-center border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800 text-2xl text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
                   <button
-                    onClick={() => resetDhikr(currentDhikr.id)}
-                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
+                    onClick={() => handleTargetChange(currentDhikr.id, currentDhikr.target + 1)}
+                    className="w-12 h-12 flex items-center justify-center text-xl rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
                   >
-                    <MdOutlineRestartAlt className="w-5 h-5" />
-                    <span>إعادة</span>
-                  </button>
-
-                  <button
-                    onClick={resetAll}
-                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
-                  >
-                    <MdOutlineRestartAlt className="w-5 h-5" />
-                    <span>الكل</span>
+                    +
                   </button>
                 </div>
               </div>
-            )}
+
+              <div className="flex justify-center gap-4">
+                <button
+                  onClick={() => handleUndo(currentDhikr.id)}
+                  className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
+                >
+                  <MdUndo className="w-5 h-5" />
+                  <span>تراجع</span>
+                </button>
+
+                <button
+                  onClick={() => resetDhikr(currentDhikr.id)}
+                  className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
+                >
+                  <MdOutlineRestartAlt className="w-5 h-5" />
+                  <span>إعادة</span>
+                </button>
+
+                <button
+                  onClick={resetAll}
+                  className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
+                >
+                  <MdOutlineRestartAlt className="w-5 h-5" />
+                  <span>الكل</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </main>
